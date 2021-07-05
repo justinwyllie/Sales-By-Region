@@ -41,3 +41,15 @@ function add_extension_sales_by_region() {
 }
 
 add_action( 'admin_enqueue_scripts', 'add_extension_sales_by_region' );
+
+
+add_filter( 'woocommerce_analytics_report_menu_items', 'add_sales_by_region_to_analytics_menu' );
+function add_sales_by_region_to_analytics_menu( $report_pages ) {
+    $report_pages[] = array(
+        'id' => 'sales-by-region',
+        'title' => __('Sales by Region', 'sales-by-region'),
+        'parent' => 'woocommerce-analytics',
+        'path' => '/analytics/sales-by-region',
+    );
+    return $report_pages;
+}
