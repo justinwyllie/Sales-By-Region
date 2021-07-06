@@ -20,12 +20,15 @@
 		"test:unit": "wp-scripts test-unit-js"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "^12.2.1",
+		"@wordpress/scripts": "^16.1.4",
 		"@woocommerce/eslint-plugin": "1.1.0",
 		"@woocommerce/dependency-extraction-webpack-plugin": "1.6.0"
 	},
 	"dependencies": {
 		"@woocommerce/components": "^7.0.0",
+		"@woocommerce/currency": "^3.1.0",
+		"@woocommerce/date": "^3.0.0",
+		"@woocommerce/settings": "^1.0.0",
 		"@wordpress/hooks": "^3.1.1",
 		"@wordpress/i18n": "^4.1.1"
 	}
