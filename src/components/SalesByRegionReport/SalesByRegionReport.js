@@ -20,6 +20,7 @@ export class SalesByRegionReport extends ReactComponent {
             currency: storeCurrency,
             data: mockData
         }
+        this.handleDateChange = this.handleDateChange.bind(this);
     }
 
     createDateQuery(query) {
@@ -29,16 +30,46 @@ export class SalesByRegionReport extends ReactComponent {
         return {period, compare, before, after, primaryDate, secondaryDate};
     }
 
+    handleDateChange(newQuery) {
+        console.log("debug2"  , this, newQuery);
+        const newDateQuery = this.createDateQuery(newQuery);
+        this.setState({dateQuery: newDateQuery});
+        //this.fetchData(newDateQuery);
+    }
+
+    
+
     render() {
+
+   
+        console.log("rendering", "props", this.props,);
+        console.log("rendering", "state",this.state);
         const reportFilters =
             <ReportFilters
                 dateQuery={this.state.dateQuery}
                 query={this.props.query}
                 path={this.props.path}
                 currency={this.state.currency}
-                isoDateFormat={isoDateFormat}/>;
+                isoDateFormat={isoDateFormat}
+                onDateSelect={this.handleDateChange}
+                />;
+
+        const {data, currency} = this.state;
         return <Fragment>
             {reportFilters}
+            <SummaryList>
+                {() => [
+                    <SummaryNumber key='sales'
+                                    value={currency.render(data.totals.total_sales)}
+                                    label={__('Total Sales', 'sales-by-region')}/>,
+                    <SummaryNumber key='countries'
+                                    value={data.totals.countries}
+                                    label={__('Countries', 'sales-by-region')}/>,
+                    <SummaryNumber key='orders'
+                                    value={data.totals.orders}
+                                    label={__('Orders', 'sales-by-region')}/>
+                ]}
+            </SummaryList>
         </Fragment>
     }
 }

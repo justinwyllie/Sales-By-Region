@@ -247,6 +247,7 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
       currency: storeCurrency,
       data: _mockData__WEBPACK_IMPORTED_MODULE_1__["mockData"]
     };
+    this.handleDateChange = this.handleDateChange.bind(this);
   }
 
   createDateQuery(query) {
@@ -271,15 +272,42 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
     };
   }
 
+  handleDateChange(newQuery) {
+    console.log("debug2", this, newQuery);
+    const newDateQuery = this.createDateQuery(newQuery);
+    this.setState({
+      dateQuery: newDateQuery
+    }); //this.fetchData(newDateQuery);
+  }
+
   render() {
+    console.log("rendering", "props", this.props);
+    console.log("rendering", "state", this.state);
     const reportFilters = Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["ReportFilters"], {
       dateQuery: this.state.dateQuery,
       query: this.props.query,
       path: this.props.path,
       currency: this.state.currency,
-      isoDateFormat: _woocommerce_date__WEBPACK_IMPORTED_MODULE_4__["isoDateFormat"]
+      isoDateFormat: _woocommerce_date__WEBPACK_IMPORTED_MODULE_4__["isoDateFormat"],
+      onDateSelect: this.handleDateChange
     });
-    return Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["Fragment"], null, reportFilters);
+    const {
+      data,
+      currency
+    } = this.state;
+    return Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["Fragment"], null, reportFilters, Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryList"], null, () => [Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
+      key: "sales",
+      value: currency.render(data.totals.total_sales),
+      label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Total Sales', 'sales-by-region')
+    }), Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
+      key: "countries",
+      value: data.totals.countries,
+      label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Countries', 'sales-by-region')
+    }), Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
+      key: "orders",
+      value: data.totals.orders,
+      label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Orders', 'sales-by-region')
+    })]));
   }
 
 }
