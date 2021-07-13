@@ -228,6 +228,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _woocommerce_currency__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_woocommerce_currency__WEBPACK_IMPORTED_MODULE_5__);
 /* harmony import */ var _woocommerce_settings__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @woocommerce/settings */ "@woocommerce/settings");
 /* harmony import */ var _woocommerce_settings__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_woocommerce_settings__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7__);
+
 
 
 
@@ -245,9 +248,141 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
     this.state = {
       dateQuery: dateQuery,
       currency: storeCurrency,
-      data: _mockData__WEBPACK_IMPORTED_MODULE_1__["mockData"]
+      allCountries: [],
+      data: {
+        loading: true
+      }
     };
+    this.fetchData(this.state.dateQuery);
     this.handleDateChange = this.handleDateChange.bind(this);
+    this.getQueryParameters = this.getQueryParameters.bind(this);
+    this.prepareData = this.prepareData.bind(this);
+    this.getOrdersWithCountries = this.getOrdersWithCountries.bind(this);
+    this.getTotalNumber = this.getTotalNumber.bind(this);
+  }
+
+  fetchData(dateQuery) {
+    if (!this.state.data.loading) this.setState({
+      data: {
+        loading: true
+      }
+    });
+    const endPoints = {
+      'countries': '/wc/v3/data/countries?_fields=code,name',
+      'orders': '/wc-analytics/reports/orders?_fields=order_id,date_created,date_created_gmt,customer_id,total_sales',
+      'customers': '/wc-analytics/reports/customers?_fields=id,country'
+    };
+    const queryParameters = this.getQueryParameters(dateQuery);
+    const countriesPath = endPoints.countries;
+    const ordersPath = endPoints.orders + queryParameters;
+    const customersPath = endPoints.customers + queryParameters;
+    Promise.all([this.state.allCountries.length === 0 ? _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
+      path: countriesPath
+    }) : Promise.resolve(this.state.allCountries), _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
+      path: ordersPath
+    }), _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
+      path: customersPath
+    })]).then(([countries, orders, customers]) => {
+      console.log("fetched Data", countries, orders, customers);
+      const data = this.prepareData(countries, orders, customers);
+      console.log("processed Data", data);
+      this.setState({
+        data: data,
+        allCountries: countries
+      });
+    }).catch(err => console.log(err));
+    console.log("fetched data", this.state.data);
+    console.log("paths", endPoints); //test endpoints
+
+    const test1 = "/wc-analytics/reports/orders";
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
+      path: test1
+    }).then(data => {
+      console.log("test1", data);
+    });
+    const test2 = "/wc-analytics/reports/orders/4608";
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
+      path: test2
+    }).then(data => {
+      console.log("test2", data);
+    });
+  }
+
+  getQueryParameters(dateQuery) {
+    const afterDate = encodeURIComponent(Object(_woocommerce_date__WEBPACK_IMPORTED_MODULE_4__["appendTimestamp"])(dateQuery.primaryDate.after, 'start'));
+    const beforeDate = encodeURIComponent(Object(_woocommerce_date__WEBPACK_IMPORTED_MODULE_4__["appendTimestamp"])(dateQuery.primaryDate.before, 'end'));
+    return `&after=${afterDate}&before=${beforeDate}&interval=day&order=asc&per_page=100&_locale=user`;
+  }
+
+  getTotalNumber(data, property) {
+    const propertyTotal = data.reduce((accumulator, currentObject) => accumulator + currentObject[property], 0);
+    return Math.round(propertyTotal * 100) / 100;
+  }
+
+  getOrdersWithCountries(orders, customers, countries) {
+    return orders.map(order => {
+      order.country_code = customers.find(item => item.id === order.customer_id).country;
+      const country = countries.find(item => item.code === order.country_code);
+      order.country = country ? country.name : Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Unknown country', 'wc-admin-sales-by-country');
+      return order;
+    });
+  }
+
+  getPerCountryData(ordersWithCountries) {
+    console.log("getPerCountryData", ordersWithCountries);
+    return ordersWithCountries.reduce((accumulator, currentObject) => {
+      const countryCode = currentObject['country_code'];
+      if (!accumulator.countries) accumulator.countries = [];
+
+      if (!accumulator.countries.find(item => item.country_code === countryCode)) {
+        const countryObjectTemplate = {
+          'country': currentObject['country'],
+          'country_code': countryCode,
+          'sales': 0,
+          'sales_percentage': 0,
+          'orders': 0,
+          'average_order_value': 0
+        };
+        accumulator.countries.push(countryObjectTemplate);
+      }
+
+      const countryIndexInAccumulator = accumulator.countries.findIndex(item => item.country_code === countryCode);
+      accumulator.countries[countryIndexInAccumulator].sales += currentObject.total_sales;
+      accumulator.countries[countryIndexInAccumulator].orders++;
+      return accumulator;
+    }, {});
+  }
+
+  prepareData(countries, orders, customers) {
+    let data;
+
+    if (orders.length > 0) {
+      const ordersWithCountries = this.getOrdersWithCountries(orders, customers, countries);
+      data = this.getPerCountryData(ordersWithCountries);
+      console.log("data", data);
+      data.totals = {
+        total_sales: this.getTotalNumber(data.countries, 'sales'),
+        orders: this.getTotalNumber(data.countries, 'orders'),
+        countries: data.countries.length
+      };
+      data.countries = data.countries.map(country => {
+        country.sales_percentage = Math.round(country.sales / data.totals.total_sales * 10000) / 100;
+        country.average_order_value = country.sales / country.orders;
+        return country;
+      });
+    } else {
+      data = {
+        countries: [],
+        totals: {
+          total_sales: 0,
+          orders: 0,
+          countries: 0
+        }
+      };
+    }
+
+    data.loading = false;
+    return data;
   }
 
   createDateQuery(query) {
@@ -295,19 +430,24 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
       data,
       currency
     } = this.state;
-    return Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["Fragment"], null, reportFilters, Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryList"], null, () => [Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
-      key: "sales",
-      value: currency.render(data.totals.total_sales),
-      label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Total Sales', 'sales-by-region')
-    }), Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
-      key: "countries",
-      value: data.totals.countries,
-      label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Countries', 'sales-by-region')
-    }), Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
-      key: "orders",
-      value: data.totals.orders,
-      label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Orders', 'sales-by-region')
-    })]));
+
+    if (this.state.data.loading) {
+      return Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])("p", null, "Waiting...");
+    } else {
+      return Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["Fragment"], null, reportFilters, Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryList"], null, () => [Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
+        key: "sales",
+        value: currency.render(data.totals.total_sales),
+        label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Total Sales', 'sales-by-region')
+      }), Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
+        key: "countries",
+        value: data.totals.countries,
+        label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Countries', 'sales-by-region')
+      }), Object(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__["createElement"])(_woocommerce_components__WEBPACK_IMPORTED_MODULE_2__["SummaryNumber"], {
+        key: "orders",
+        value: data.totals.orders,
+        label: Object(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_3__["__"])('Orders', 'sales-by-region')
+      })]));
+    }
   }
 
 }
@@ -464,6 +604,17 @@ var mockData = {
 /***/ (function(module, exports) {
 
 (function() { module.exports = window["wc"]["wcSettings"]; }());
+
+/***/ }),
+
+/***/ "@wordpress/api-fetch":
+/*!**********************************!*\
+  !*** external ["wp","apiFetch"] ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+(function() { module.exports = window["wp"]["apiFetch"]; }());
 
 /***/ }),
 
