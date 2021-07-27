@@ -269,8 +269,9 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
     });
     const endPoints = {
       'countries': '/wc/v3/data/countries?_fields=code,name',
-      'orders': '/wc-analytics/reports/orders?_fields=order_id,date_created,date_created_gmt,customer_id,total_sales',
-      'customers': '/wc-analytics/reports/customers?_fields=id,country'
+      //'orders': '/wc-analytics/reports/orders?_fields=order_id,date_created,date_created_gmt,customer_id,total_sales',
+      'customers': '/wc-analytics/reports/customers?_fields=id,country',
+      'orders': '/wc-analytics/reports/orders?'
     };
     const queryParameters = this.getQueryParameters(dateQuery);
     const countriesPath = endPoints.countries;
@@ -283,7 +284,9 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
     }), _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
       path: customersPath
     })]).then(([countries, orders, customers]) => {
-      console.log("fetched Data", countries, orders, customers);
+      console.log("fetched data orders", orders);
+      console.log("fetched Data customers", customers);
+      console.log("fetched Data countries", countries);
       const data = this.prepareData(countries, orders, customers);
       console.log("processed Data", data);
       this.setState({
@@ -291,7 +294,7 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
         allCountries: countries
       });
     }).catch(err => console.log(err));
-    console.log("fetched data", this.state.data);
+    console.log("processed data", this.state.data);
     console.log("paths", endPoints); //test endpoints
 
     const test1 = "/wc-analytics/reports/orders";
@@ -300,7 +303,7 @@ class SalesByRegionReport extends _wordpress_element__WEBPACK_IMPORTED_MODULE_0_
     }).then(data => {
       console.log("test1", data);
     });
-    const test2 = "/wc-analytics/reports/orders/4608";
+    const test2 = "/wc-analytics/orders/4610";
     _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_7___default()({
       path: test2
     }).then(data => {

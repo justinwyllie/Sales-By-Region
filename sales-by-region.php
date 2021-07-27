@@ -53,3 +53,61 @@ function add_sales_by_region_to_analytics_menu( $report_pages ) {
     );
     return $report_pages;
 }
+
+//add custom endpoint to get the data from the postmeta
+/*
+use WP Query or wpdb and custom?
+The standard WP_Query does not return a posts meta data. 
+The only options you have are to: 1) run get_post_meta on individual keys, 
+2) run get_post_custom to get all of a posts custom fields in one shot, or
+ 3) create your own query using the $wpdb class (get_results()) to build your own return object.
+https://wordpress.stackexchange.com/questions/172041/can-wp-query-return-posts-meta-in-a-single-request
+
+need to understand how refunds are handled
+my results should not include refunded amounts
+do i have to deal with partial refunds? technically is it possible. 2 cds and they refund one!
+wc-completed
+wc-refunded 
+
+*/
+
+function get_orders(WP_REST_Request $request)
+{
+    
+    $start_date = $request['start_date'];
+    $end_date = $request['end_date'];
+
+   
+    //https://developer.wordpress.org/reference/functions/get_posts/ or numberposts?
+    $args = array(
+        
+        'numberposts' => 25,
+        "post_type"        => "shop_order",
+        'post_status' => "wc-completed",
+        "fields" => "ids"
+    );
+    //https://developer.wordpress.org/reference/classes/wp_query/#methods
+    $posts = get_posts( $args );
+  
+ 
+    if ( !empty($posts) ) 
+    {
+        $data = $posts;
+    }
+    else 
+    {
+        $data = null;
+    }
+    //here goes data query 
+    $data_json = json_encode($data);
+    return $data_json;
+}
+
+//https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'sales-by-region/v1', '/sales/(?P<start_date>.+)/(?P<end_date>.+)', array(
+      'methods' => 'GET',
+      'callback' => 'get_orders'
+
+    ) );
+  } );
