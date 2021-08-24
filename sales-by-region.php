@@ -108,6 +108,88 @@ SELECT  wp_posts.post_date, wp_posts.ID , wp_postmeta.* FROM wp_posts  INNER JOI
 ORDER BY wp_posts.ID DESC
 
 TODO - permissions / refunds
+
+use data from posts table and completed status? (NOT one of the dates from posts_meta)
+
+refund examples: 616 850 3275 4088 4107 4109 4114
+
+
+3773 wc-completed shop_order (note not changed to wc-refunded) _order_total 70.75 14.00 WP PARTIAL
+4114 - wc-completed shop_order_refund   _refund_amount 34.50 _order_total 34.50 WP
+
+4109 wc-completed shop_order_refund linked 4108 Feb 21 _refund_amount 6 _order_total 6 FULL
+4108 wc-refunded shop_order _order_total 6 PP 
+
+4088 wc-completed shop_order_refund linked to 4087 _order_total -6 FULL
+4087 wc-refunded shop_order 6 PP
+
+4107 Feb 21 wc-completed shop_order_refund _order_total -6 FULL
+4106 wc-refunded shop_order _order_total 6   PP
+
+3275 wc-completed shop_order_refund _refund_amount 2 PARTIAL
+3181 wc-completed shop_order   WP 14.50
+
+850 Nov 2016 wc-completed  shop_order_refund linked to 848 _refund_amount 7 PARTIAL
+848 wc-completed shop_order WP _order_total 141 WP
+
+616 wc-completed shop_order_refund _refund_amount 12.50 PARTIAL
+559 wc-completed shop_order dec 2015 _order_total 13.50 WP 
+
+
+
+LIVE TEST
+
+4732 wc-completed shop_order_refund PARTIAL
+4731 wc-completed shop_order PP 
+
+4735 wc-completed shop_order_refund FULL MANUAL
+4733 wc-completed shop_order WP
+
+so - the switch to wc-refunded appears to be to do with a FULL PAYPAL REFUND 
+BUT NOT A FULL WP REFUND - which leaves the original wc-completed
+
+
+PLAN A
+so - to get INCOME - 
+get all posts with date of post in range
+wc-completed and shop_order - (then figs from meta)  - this gets us all INCOME
+- it excludes fully refunded orders but only Paypal ones!
+ -
+ this query is via get_posts and either a meta key system or a filter
+
+then we need to get partial refunds for this set:
+    take IDS for this set
+    look for posts which have this ID in post_parent plus wc-completed shop_order_refund
+    get these posts and get the refund amount _refund_amount from postsmeta
+this will have to be a purely custom query
+
+get data
+massage
+
+ok. so test a full WP refund. if this also changes status to wp-refunded then use above system
+
+PLAN B
+the alternative is: first query gets wc-completed and wc-refunded and shop_order - gets
+all fin from meta: this will get all INCOME inc. that which has been fully refunded.
+
+then as 2nd query above - now we deduct from this all full refund amounts plus the partial refunds
+
+actually PLAN A works: q1 will get all INCOME from WP (even if fully or partly refunded) and all
+income from PayPal which is not fully refunded. we get the IDS and q2 now gets us all
+refund amounts for WP (part of full)
+
+
+
+data from posts-meta:
+4603 
+_billing_country GB *what codes are these?
+_order_shipping 1.5
+_order_total 13.50 DOES THIS INCLUDe SHIPPING? YES so goods was 12
+_paid_date (FOR INFO)
+_completed_date (FOR INFO)
+
+
+
  */
 function get_orders(WP_REST_Request $request)
 {
@@ -121,7 +203,7 @@ function get_orders(WP_REST_Request $request)
     
     $args = array(
         
-        'numberposts' => 25,
+        'numberposts' => -1,
         "post_type"        => "shop_order",
         'post_status' => "wc-completed",
         "fields" => "ids",
@@ -140,9 +222,9 @@ function get_orders(WP_REST_Request $request)
     //https://developer.wordpress.org/reference/classes/wp_query/#custom-field-post-meta-parameters 
 
     //investigate sql
-    $query = new WP_Query( $args );
-    $query_sql = $query->request;
-     echo $query_sql;
+    //$query = new WP_Query( $args );
+    //$query_sql = $query->request;
+    //echo $query_sql;
     //end investigate sql
   
     if ( !empty($posts) ) 
