@@ -114,8 +114,9 @@ use data from posts table and completed status? (NOT one of the dates from posts
 refund examples: 616 850 3275 4088 4107 4109 4114
 
 
+4114 - wc-completed shop_order_refund   _refund_amount 34.50 _order_total 34.50 WP _post_parent 3773
 3773 wc-completed shop_order (note not changed to wc-refunded) _order_total 70.75 14.00 WP PARTIAL
-4114 - wc-completed shop_order_refund   _refund_amount 34.50 _order_total 34.50 WP
+
 
 4109 wc-completed shop_order_refund linked 4108 Feb 21 _refund_amount 6 _order_total 6 FULL
 4108 wc-refunded shop_order _order_total 6 PP 
@@ -126,7 +127,7 @@ refund examples: 616 850 3275 4088 4107 4109 4114
 4107 Feb 21 wc-completed shop_order_refund _order_total -6 FULL
 4106 wc-refunded shop_order _order_total 6   PP
 
-3275 wc-completed shop_order_refund _refund_amount 2 PARTIAL
+3275 wc-completed shop_order_refund _refund_amount 2 PARTIAL post_parent 3181
 3181 wc-completed shop_order   WP 14.50
 
 850 Nov 2016 wc-completed  shop_order_refund linked to 848 _refund_amount 7 PARTIAL
@@ -139,14 +140,17 @@ refund examples: 616 850 3275 4088 4107 4109 4114
 
 LIVE TEST
 
-4732 wc-completed shop_order_refund PARTIAL
-4731 wc-completed shop_order PP 
+4736 NOW links to 4731 and is shop_order_refund wc-completed LINKS TO 4731 
+4732 wc-completed shop_order_refund PARTIAL LINKS TO 4731 
+4731 wc-completed shop_order PP  NB changed to wc-refunded when we did a full refund
 
 4735 wc-completed shop_order_refund FULL MANUAL
 4733 wc-completed shop_order WP
 
 so - the switch to wc-refunded appears to be to do with a FULL PAYPAL REFUND 
 BUT NOT A FULL WP REFUND - which leaves the original wc-completed
+we don't know if an automatic WP refund would change to wc-refunded. cos
+we aren't set up for this. 
 
 
 PLAN A
@@ -176,7 +180,8 @@ then as 2nd query above - now we deduct from this all full refund amounts plus t
 
 actually PLAN A works: q1 will get all INCOME from WP (even if fully or partly refunded) and all
 income from PayPal which is not fully refunded. we get the IDS and q2 now gets us all
-refund amounts for WP (part of full)
+refund amounts for WP (part of full) plus refund amounts for PP partial refunds but not whole
+because they weren't in the set
 
 
 
@@ -206,19 +211,77 @@ function get_orders(WP_REST_Request $request)
         'numberposts' => -1,
         "post_type"        => "shop_order",
         'post_status' => "wc-completed",
-        "fields" => "ids",
+        "fields" => "all",
         "date_query" => array(
             'after' => $start_date,
             'before' => $end_date,
             'inclusive' => true
             ) 
-        
     
           
     );
     //
     //https://developer.wordpress.org/reference/classes/wp_query/#methods
     $posts = get_posts( $args );
+    
+    
+    //what if emtpy todo $income will be empty
+    $income = array();
+    $ids = array();
+    foreach($posts as $post) 
+    {
+        $id = $post->ID;
+        $ids[] = $id;
+        $meta = get_post_meta($id);
+        $post_parent = $post->post_parent;
+     
+        $income[$id] = array("meta" => $meta, "post_parent"=>$post_parent); //TODO need to clarify if this is making db calls or not
+
+    }
+
+    //var_dump("---", $income, "----");
+    echo "------------------------------";
+    /*
+    * SELECT wp_posts.ID, wp_postmeta.meta_value FROM `wp_posts` 
+    INNER JOIN wp_postmeta ON wp_posts.ID = wp_postmeta.post_id WHERE wp_posts.post_parent
+     IN (3773, 3181) AND wp_posts.post_status = "wc-completed" and wp_posts.post_type 
+     = "shop_order_refund" AND wp_postmeta.meta_key = '_refund_amount';
+
+     --do we take the refund off the order or the shipping?
+     --prob. off order and if any left off shipping
+     --if still bal - prob. remove it too since it is money out
+     --what if 2 refunds? if the refund has been done in n chuncks we get n rows
+     each redfund transaction leads to a line in wp_posts and a set of entires is postmeta
+     -in our case as we only get one metakey we will get n rows. fine just add them all
+    */
+
+    global $wpdb;
+    echo 
+    $pref = $wpdb->prefix;;
+
+    if (!empty($income))
+    {
+        $refunds = array();
+        $idsList = implode(",", $ids);
+        $refundSql = <<<EOT
+        SELECT p.ID, pm.meta_value FROM {$pref}posts p
+        INNER JOIN {$pref}postmeta pm ON p.ID = pm.post_id WHERE p.post_parent
+         IN ($idsList) AND p.post_status = "wc-completed" and p.post_type 
+         = "shop_order_refund" AND pm.meta_key = '_refund_amount';
+EOT;
+       
+        var_dump($refundSql);
+        
+
+    }
+    else
+    {
+        //nothing at all a big zero
+    }
+
+    
+
+
     //https://developer.wordpress.org/reference/classes/wp_query/#custom-field-post-meta-parameters 
 
     //investigate sql
@@ -237,7 +300,7 @@ function get_orders(WP_REST_Request $request)
     }
     //here goes data query 
     $data_json = json_encode($data);
-    return $data_json;
+    return "-";
 }
 
 //https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
