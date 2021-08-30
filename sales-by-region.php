@@ -211,7 +211,7 @@ function get_orders(WP_REST_Request $request)
         'numberposts' => -1,
         "post_type"        => "shop_order",
         'post_status' => "wc-completed",
-        "fields" => "all",
+        "fields" => "ids",
         "date_query" => array(
             'after' => $start_date,
             'before' => $end_date,
@@ -228,35 +228,23 @@ function get_orders(WP_REST_Request $request)
     //what if emtpy todo $income will be empty
     $income = array();
     $ids = array();
-    foreach($posts as $post) 
+    foreach($posts as $id) 
     {
-        $id = $post->ID;
+        //TODO need to clarify if this is making db calls or not if too many need to get this via filters
+        $orderTotal = get_post_meta($id, '_order_total', true);
         $ids[] = $id;
-        $meta = get_post_meta($id);
-        $post_parent = $post->post_parent;
-     
-        $income[$id] = array("meta" => $meta, "post_parent"=>$post_parent); //TODO need to clarify if this is making db calls or not
-
+        $orderShipping = get_post_meta($id, '_order_shipping', true);
+        $billingCountry = get_post_meta($id, '_billing_country', true);
+        $goodsTotal = $orderTotal - $orderShipping;
+        $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
+           "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry); 
     }
 
-    //var_dump("---", $income, "----");
-    echo "------------------------------";
-    /*
-    * SELECT wp_posts.ID, wp_postmeta.meta_value FROM `wp_posts` 
-    INNER JOIN wp_postmeta ON wp_posts.ID = wp_postmeta.post_id WHERE wp_posts.post_parent
-     IN (3773, 3181) AND wp_posts.post_status = "wc-completed" and wp_posts.post_type 
-     = "shop_order_refund" AND wp_postmeta.meta_key = '_refund_amount';
-
-     --do we take the refund off the order or the shipping?
-     --prob. off order and if any left off shipping
-     --if still bal - prob. remove it too since it is money out
-     --what if 2 refunds? if the refund has been done in n chuncks we get n rows
-     each redfund transaction leads to a line in wp_posts and a set of entires is postmeta
-     -in our case as we only get one metakey we will get n rows. fine just add them all
-    */
+    var_dump("INCOME", $income, "----");
+   
 
     global $wpdb;
-    echo 
+
     $pref = $wpdb->prefix;;
 
     if (!empty($income))
@@ -264,19 +252,84 @@ function get_orders(WP_REST_Request $request)
         $refunds = array();
         $idsList = implode(",", $ids);
         $refundSql = <<<EOT
-        SELECT p.ID, pm.meta_value FROM {$pref}posts p
+        SELECT p.ID, pm.meta_value, p.post_parent FROM {$pref}posts p
         INNER JOIN {$pref}postmeta pm ON p.ID = pm.post_id WHERE p.post_parent
          IN ($idsList) AND p.post_status = "wc-completed" and p.post_type 
          = "shop_order_refund" AND pm.meta_key = '_refund_amount';
 EOT;
        
-        var_dump($refundSql);
+        //var_dump($refundSql);
+        $refunds = $wpdb->get_results($refundSql);
+        var_dump("REFUNDS", $refunds);
+        //what is just no data?
+
+        //remove refunds
+        //deduct refunds from income - matching to parent order
+        //deduct from total order which means that we deduct from order before shipping
+        foreach($income as $postId => &$postData)
+        {
+            foreach($refunds as $row => $data)
+            {
+                if ($data->post_parent == $postId)
+                {
+                    
+                    $refundAmount = $data->meta_value;
+                    $postData["_order_total"] = $postData["_order_total"] - $refundAmount;
+                 }
+            }
+            
+        }
+        unset($postData);
+
+        var_dump("INCOME2", $income);
         
+        $ukTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
+        $euTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
+        $rowTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
+        
+
+        $uk = array("GB");//todo what happens to NI?
+        $wcCountries = new WC_Countries();
+        $eu = $wcCountries->get_european_union_countries();
+        $row = array();
+
+        //combine per region for shipping and goods totals
+        foreach($income as $postId => $postData )
+        {
+            if (in_array($postData["_billing_country"], $uk))
+            {
+                $ukTotals["goods"] = $ukTotals["goods"] + $postData["_goods_net"];
+                $ukTotals["shipping"] = $ukTotals["shipping"] + $postData["_order_shipping"];
+                $ukTotals["total"] = $ukTotals["total"] + $postData["_order_total"];
+            }
+            elseif (in_array($postData["_billing_country"], $eu))
+            {
+                $euTotals["goods"] = $euTotals["goods"] + $postData["_goods_net"];
+                $euTotals["shipping"] = $euTotals["shipping"] + $postData["_order_shipping"];
+                $euTotals["total"] = $euTotals["total"] + $postData["_order_total"];
+            }
+            else
+            {
+                $rowTotals["goods"] = $rowTotals["goods"] + $postData["_goods_net"];
+                $rowTotals["shipping"] = $rowTotals["shipping"] + $postData["_order_shipping"];
+                $rowTotals["total"] = $rowTotals["total"] + $postData["_order_total"];
+            }
+            
+        }
+
+        //cross check todo
+        $result = array();
+        $result["uk"] = $ukTotals;
+        $result["eu"] = $euTotals;
+        $result["row"] = $rowTotals;
+
+        var_dump("final result", $result);
 
     }
     else
     {
-        //nothing at all a big zero
+        //nothing at all a big zero TODO what does this return?
+        $result = null;
     }
 
     
@@ -290,24 +343,24 @@ EOT;
     //echo $query_sql;
     //end investigate sql
   
-    if ( !empty($posts) ) 
-    {
-        $data = $posts;
-    }
-    else 
-    {
-        $data = null;
-    }
-    //here goes data query 
-    $data_json = json_encode($data);
+    //return json_encode($result);
     return "-";
 }
+
+/*
+  function () {
+            return current_user_can( 'delete_site' ); //
+      }
+  */   
 
 //https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
 add_action( 'rest_api_init', function () {
     register_rest_route( 'sales-by-region/v1', '/sales/(?P<start_date>.+)/(?P<end_date>.+)', array(
       'methods' => 'GET',
-      'callback' => 'get_orders'
+      'callback' => 'get_orders',
+      'permission_callback' => '__return_true' 
 
     ) );
   } );
+
+   
