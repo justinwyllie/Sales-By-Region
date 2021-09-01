@@ -80,8 +80,10 @@ function sales_by_region_filter_by_date($where = '')
 function get_orders(WP_REST_Request $request)
 {
     
-    $start_date = $request['start_date'];
-    $end_date = $request['end_date'];
+    $start_date = urldecode($request['start_date']);
+    $end_date = urldecode($request['end_date']);
+
+    //var_dump($start_date, $end_date);exit;
     
     $args = array(
         
@@ -223,7 +225,7 @@ EOT;
     //$query_sql = $query->request;
     //echo $query_sql;
     //end investigate sql
-  
+    
     return json_encode($result);
     
 }

@@ -41,7 +41,9 @@ export class SalesByRegionReport extends ReactComponent {
 
         apiFetch({path: salesPath}).then((salesData) =>
             {
-                console.log("salesData1", salesData);
+                console.log("salesData1", salesData, typeof salesData);
+                //why is this not automatic todo
+                salesData = JSON.parse(salesData);
                 const data = this.prepareData(salesData);
                 this.setState({data: data});
 
@@ -55,16 +57,22 @@ export class SalesByRegionReport extends ReactComponent {
 
 
     getQueryParameters(dateQuery) {
+        //todo maybe we should append timestamp? but it breaks the query. why? 
+        //also check date format dd-mm-yyyy in my tests but this comp. gives yyyy-mm-dd
+        //send (YYYY-MM-DD)  for best compatibility with get_posts after and before
         const afterDate = encodeURIComponent(appendTimestamp(dateQuery.primaryDate.after, 'start'));
         const beforeDate = encodeURIComponent(appendTimestamp(dateQuery.primaryDate.before, 'end'));
+        
         return `/${afterDate}/${beforeDate}`;
     }
 
  
-    prepareData(sales) {
+    prepareData(salesData) {
+        console.log("sales is", typeof salesData)
         let data;
-        data = sales;
+        data = {sales: salesData};
         data.loading = false;
+        console.log("data2", data);
         return data;
     }
 
@@ -76,7 +84,7 @@ export class SalesByRegionReport extends ReactComponent {
     }
 
     handleDateChange(newQuery) {
-        console.log("debug2"  , this, newQuery);
+        console.log("handleDateChanged"  , this, newQuery);
         const newDateQuery = this.createDateQuery(newQuery);
         this.setState({dateQuery: newDateQuery});
     }
@@ -85,7 +93,7 @@ export class SalesByRegionReport extends ReactComponent {
 
         console.log("rendering", "props", this.props,);
         console.log("rendering", "state",this.state);
-        str = JSON.stringify(data.salesData);
+      
         const reportFilters =
             <ReportFilters
                 dateQuery={this.state.dateQuery}
@@ -100,13 +108,40 @@ export class SalesByRegionReport extends ReactComponent {
         if (this.state.data.loading) 
         { 
             return <p>Waiting...</p> 
-        }
-        else 
+        } 
+        else
         {
             return <Fragment>
-                AAA{reportFilters}AAA
-                <p>str</p>
-                    
+                {reportFilters}   
+                <p>{this.state.data.sales == null ? 'No results for this date range. Please try another date range.' : ''}</p>
+                <div>
+                    <table>
+                        <tr>
+                            <td></td>
+                            <td>UK</td>
+                            <td>EU</td>
+                            <td>ROW</td>
+                        </tr>
+                        <tr>
+                            <td>Goods net</td>
+                            <td>{this.state.data.sales['uk']['goods']}</td>
+                            <td>{this.state.data.sales['eu']['goods']}</td>
+                            <td>{this.state.data.sales['row']['goods']}</td>
+                        </tr>
+                        <tr>
+                            <td>Shipping</td>
+                            <td>{this.state.data.sales['uk']['shipping']}</td>
+                            <td>{this.state.data.sales['eu']['shipping']}</td>
+                            <td>{this.state.data.sales['row']['shipping']}</td>
+                        </tr>
+                        <tr>
+                            <td>Total</td>
+                            <td>{this.state.data.sales['uk']['total']}</td>
+                            <td>{this.state.data.sales['eu']['total']}</td>
+                            <td>{this.state.data.sales['row']['total']}</td>
+                        </tr>
+                    </table>
+                </div>
             </Fragment>
         }
     }
