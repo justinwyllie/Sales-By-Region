@@ -1,18 +1,85 @@
 import {Component as ReactComponent, Fragment} from '@wordpress/element';
-import {TableCard} from '@woocommerce/components';
-import { ReportFilters,} from '@woocommerce/components';
+import {TableCard, ReportFilters} from '@woocommerce/components';
 import {appendTimestamp, getCurrentDates, getDateParamsFromQuery, isoDateFormat} from '@woocommerce/date';
 import {default as Currency} from '@woocommerce/currency';
 import {CURRENCY as storeCurrencySetting} from '@woocommerce/settings'; 
 import apiFetch from '@wordpress/api-fetch';    
 
+function DisplayError(props)
+{
+    return <p className="salesByRegionError">{props.message}</p>; 
+}
 
 class TableDisplay extends ReactComponent {
 
-    componentDidUpdate(prevProps) {
-        //crazy check of render here? 
+    constructor(props) {
+        super(props);
+        this.state = {
+             error: false
+        };
+    }
 
+    testRender() {
+        //crazy check of render here
+        const ukGoods = 
+            document.querySelector("div.woocommerce-table__table table tr:nth-child(2) th + td").textContent;
+        const ukShipping = 
+            document.querySelector("div.woocommerce-table__table table tr:nth-child(3) th + td").textContent;
+        const ukTotal = 
+            document.querySelector("div.woocommerce-table__table table tr:nth-child(4) th + td").textContent;
+        const euGoods = 
+            document.querySelector("div.woocommerce-table__table table tr:nth-child(2) td:nth-child(3)").textContent;
+        const euShipping = 
+            document.querySelector("div.woocommerce-table__table table tr:nth-child(3) td:nth-child(3)").textContent;
+        const euTotal = 
+            document.querySelector("div.woocommerce-table__table table tr:nth-child(4) td:nth-child(3)").textContent;
+            
+        let error = false;
+        if (ukGoods != this.props.sales['uk']['goods'])
+        {
+            error = true;
+        }    
+        if (ukShipping != this.props.sales['uk']['shipping'])
+        {
+            error = true;
+        }  
+        if (ukTotal != this.props.sales['uk']['total'])
+        {
+            error = true;
+        }  
+        if (euGoods != this.props.sales['eu']['goods'])
+        {
+            error = true;
+        }  
+        if (euShipping != this.props.sales['eu']['shipping'])
+        {
+            error = true;
+        }  
+        if (euTotal != this.props.sales['eu']['total'])
+        {
+            error = true;
+        }  
+
+        if (error)
+        {
+            this.setState({"error": true});
+        }
+
+    }
+
+    componentDidUpdate() {
+        if (!this.state.error)
+        {
+            this.testRender();
+        }   
     }    
+
+    componentDidMount() {
+        if (!this.state.error)
+        {
+            this.testRender();
+        }
+    }  
 
     render() {
 
@@ -30,44 +97,22 @@ class TableDisplay extends ReactComponent {
                 {display: this.props.sales['eu']['shipping']}, {display: this.props.sales['row']['shipping']}],
                 [{display: 'Total (' + this.props.currency + ')'},{display: this.props.sales['uk']['total'] },
                 {display: this.props.sales['eu']['total']}, {display: this.props.sales['row']['total']}],
-    
         ];
 
+        if (this.state.error)
+        {
+            return <DisplayError message="Sorry. An error has occurred. Please contact support." />
+        }
+        else
+        {
         return <TableCard 
                     title="Sales Revenue Summary"
                     rows={tableRows}
                     headers={tableHeaders}
                     rowsPerPage={100}
                     totalRows={tableRows.length}>
-                </TableCard>
-
-
-        /*return <table class="salesByRegionData">
-             <tr>
-                <th></th>
-                <th>UK</th>
-                <th>EU</th>
-                <th>ROW</th>
-            </tr>
-            <tr>
-                <td>Goods net ({this.props.currency})</td>
-                <td>{this.props.sales['uk']['goods']}</td>
-                <td>{this.props.sales['eu']['goods']}</td>
-                <td>{this.props.sales['row']['goods']}</td>
-            </tr>
-            <tr>
-                <td>Shipping ({this.props.currency})</td>
-                <td>{this.props.sales['uk']['shipping']}</td>
-                <td>{this.props.sales['eu']['shipping']}</td>
-                <td>{this.props.sales['row']['shipping']}</td>
-            </tr>
-            <tr>
-                <td>Total ({this.props.currency})</td>
-                <td>{this.props.sales['uk']['total']}</td>
-                <td>{this.props.sales['eu']['total']}</td>
-                <td>{this.props.sales['row']['total']}</td>
-            </tr>
-        </table>  */ 
+                 </TableCard>
+        }          
     }
 }
 
@@ -78,16 +123,22 @@ export class SalesByRegionReport extends ReactComponent {
         super(props);
         const dateQuery = this.createDateQuery(this.props.query);
         const storeCurrency = new Currency(storeCurrencySetting);
+   
         this.state = {
             dateQuery: dateQuery,
             currency: storeCurrency,
             data: { loading: true },
             error: false
         };
-        this.fetchData(this.state.dateQuery);
+        
         this.handleDateChange = this.handleDateChange.bind(this);
         this.getQueryParameters = this.getQueryParameters.bind(this);
         this.prepareData = this.prepareData.bind(this);
+    }
+
+    componentDidMount()
+    {
+        this.fetchData(this.state.dateQuery);
     }
 
     fetchData(dateQuery) {
@@ -99,15 +150,11 @@ export class SalesByRegionReport extends ReactComponent {
         const queryParameters = this.getQueryParameters(dateQuery);
         const salesPath = endPoints.salesByRegion + queryParameters;
 
-        apiFetch({path: salesPath}).then((salesData) =>
+        apiFetch({path: salesPath, parse: true}).then((salesData) =>
             {
-                
-                //why is this not automatic todo
-                salesData = JSON.parse(salesData);
                 const data = this.prepareData(salesData);
                 this.setState({data: data});
                 this.setState({error: false});
-
             }
         )
         .catch( (err) => {
@@ -123,7 +170,6 @@ export class SalesByRegionReport extends ReactComponent {
         return `/${afterDate}/${beforeDate}`;
     }
 
- 
     prepareData(salesData) {
         let data;
         data = {sales: salesData};
@@ -144,7 +190,7 @@ export class SalesByRegionReport extends ReactComponent {
     }
 
     render() {
-      
+
         const reportFilters =
             <ReportFilters
                 dateQuery={this.state.dateQuery}
@@ -157,7 +203,7 @@ export class SalesByRegionReport extends ReactComponent {
 
         if (this.state.error) 
         { 
-             return <p class="salesByRegionError">Sorry. An error has occurred. Please try again later.</p> 
+             return <DisplayError message="Sorry. An error has occurred. Please try again later."></DisplayError> 
         } 
         else if (this.state.data.loading) 
         {
@@ -167,9 +213,9 @@ export class SalesByRegionReport extends ReactComponent {
         {
             return <Fragment>
                 {reportFilters}   
-                <p>{this.state.data.sales == null ? 'No results for this date range. Please try another date range.' : ''}</p>
-                {this.state.data.sales != null &&
-                    <TableDisplay currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
+                {(Array.isArray(this.state.data.sales) && this.state.data.sales.length == 0) ? 
+                <p>No results for this date range. Please try another date range.</p> : 
+                <TableDisplay currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
             </Fragment>
         }
     }

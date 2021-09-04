@@ -1,16 +1,30 @@
 <?php
 /**
  * Plugin Name: Sales By Region
- * 
- * @package WooCommerce\Admin
+ * Plugin URI: http://parkrecords.com/salesbyregion
+ * Description: Sales by Region
+ * Version: 1.0.0
+ * Author: Justin Wyllie
+ * Author URI: http://justinwylliephotography.com
+ * Developer: Justin Wyllie
+ * Developer URI: http://justinwylliephotography.com
+ * Text Domain: sales-by-region 
+ * Domain Path: /languages
+ *
+ * WC requires at least: 5.6
+ * WC tested up to: 5.6
+ *
+ * License: GNU General Public License v3.0
+ * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  */
-
 /**
  * Register the JS.
  * * http://dev.parkrecords.com/wp-json/sales-by-region/v1?start-date=d1&end-date=d2
  * http://dev.parkrecords.com/wp-json/sales-by-region/v1/sales/7-7-2021/12-7-2021
  *
  */
+//??//https://jasonyingling.me/enqueueing-scripts-and-styles-for-gutenberg-blocks/
+
 function add_extension_sales_by_region() {
 	if ( ! class_exists( 'Automattic\WooCommerce\Admin\Loader' ) || ! \Automattic\WooCommerce\Admin\Loader::is_admin_or_embed_page() ) {
 		return;
@@ -41,11 +55,15 @@ function add_extension_sales_by_region() {
 	wp_enqueue_script( 'sales-by-region' );
 	wp_enqueue_style( 'sales-by-region' );
 }
-
 add_action( 'admin_enqueue_scripts', 'add_extension_sales_by_region' );
 
 
-add_filter( 'woocommerce_analytics_report_menu_items', 'add_sales_by_region_to_analytics_menu' );
+
+
+
+
+
+
 function add_sales_by_region_to_analytics_menu( $report_pages ) {
     $report_pages[] = array(
         'id' => 'sales-by-region',
@@ -55,14 +73,10 @@ function add_sales_by_region_to_analytics_menu( $report_pages ) {
     );
     return $report_pages;
 }
+add_filter( 'woocommerce_analytics_report_menu_items', 'add_sales_by_region_to_analytics_menu' );
 
 
-//not used
-function sales_by_region_filter_by_date($where = '')
-{
-    $where .= " AND post_date > '" . date('Y-m-d', strtotime('-30 days')) . "'";
-    return $where;
-}
+
 /**
  * 
  * 
@@ -216,7 +230,7 @@ EOT;
     }
     else
     {
-        $result = null;
+        $result = array();
     }
 
  
@@ -226,22 +240,20 @@ EOT;
     //echo $query_sql;
     //end investigate sql
     
-    return json_encode($result);
+    return new WP_REST_Response( $result, 200 );
     
 }
 
-/*
-  function () {
-            return current_user_can( 'delete_site' ); //
-      }
-  */   
+
 
 //https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
 add_action( 'rest_api_init', function () {
     register_rest_route( 'sales-by-region/v1', '/sales/(?P<start_date>.+)/(?P<end_date>.+)', array(
       'methods' => 'GET',
       'callback' => 'get_orders',
-      'permission_callback' => '__return_true' 
+      'permission_callback' => function () {
+        return current_user_can( 'activate_plugins' );
+  } 
 
     ));
   });
