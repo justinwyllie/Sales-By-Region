@@ -96,8 +96,6 @@ function get_orders(WP_REST_Request $request)
     $start_date = urldecode($request['start_date']);
     $end_date = urldecode($request['end_date']);
 
-    //var_dump($start_date, $end_date);exit;
-    
     $args = array(
         
         'numberposts' => -1,
