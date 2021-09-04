@@ -199,7 +199,7 @@ export class SalesByRegionReport extends ReactComponent {
                 currency={this.state.currency}
                 isoDateFormat={isoDateFormat}
                 onDateSelect={this.handleDateChange}
-                />;
+            />;
 
         if (this.state.error) 
         { 

@@ -24,7 +24,6 @@
  *
  */
 //??//https://jasonyingling.me/enqueueing-scripts-and-styles-for-gutenberg-blocks/
-
 function add_extension_sales_by_region() {
 	if ( ! class_exists( 'Automattic\WooCommerce\Admin\Loader' ) || ! \Automattic\WooCommerce\Admin\Loader::is_admin_or_embed_page() ) {
 		return;
