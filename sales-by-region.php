@@ -110,7 +110,17 @@ function get_orders(WP_REST_Request $request)
             
     );
 
+    //DEBUG
+        $the_object = new WP_Query($args);
+
+    // show the mysql as a string
+        echo $the_object->request;
+        //( wp_posts.post_date >= '2021-11-01 00:00:00' AND wp_posts.post_date <= '2021-11-24 23:59:59' )
+
+    //DEBUG
+
     $posts = get_posts( $args );
+
     
     $income = array();
     $ids = array();
@@ -141,12 +151,25 @@ function get_orders(WP_REST_Request $request)
         $refundSql = <<<EOT
         SELECT p.ID, pm.meta_value, p.post_parent FROM {$pref}posts p
         INNER JOIN {$pref}postmeta pm ON p.ID = pm.post_id WHERE p.post_parent
-         IN ($idsList) AND p.post_status = "wc-completed" and p.post_type 
+        wp_posts.post_date >= '{$start_date}' AND wp_posts.post_date <= '{$end_date}'
+          AND p.post_status = "wc-completed" and p.post_type 
          = "shop_order_refund" AND pm.meta_key = '_refund_amount';
 EOT;
        
-        $refunds = $wpdb->get_results($refundSql);
+        //check null for zero? 
+        $refundSql = "SELECT p.ID, pm.meta_value, p.post_parent FROM " . $pref . "posts p INNER JOIN " . 
+            $pref . "postmeta pm ON p.ID = pm.post_id WHERE wp_posts.post_date >= '%s' AND wp_posts.post_date <= '%s " .
+            " AND p.post_status = 'wc-completed' and p.post_type = 'shop_order_refund' AND " .
+            " pm.meta_key = '_refund_amount'" ;
+        $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$start_date, $end_date]));
+        var_dump($refunds);
+       
+        
 
+
+        /* don't deduct refunds - show them as separate data
+         -- because the refund could happen in a later time period 
+         -- this method would miss these refunds
         if (!empty($refunds))
         {
             foreach($income as $postId => &$postData)
@@ -172,6 +195,7 @@ EOT;
             }
         }
         unset($postData);
+        */
       
         $ukTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $euTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
