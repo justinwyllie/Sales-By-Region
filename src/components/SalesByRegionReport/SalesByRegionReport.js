@@ -10,6 +10,26 @@ function DisplayError(props)
     return <p className="salesByRegionError">{props.message}</p>; 
 }
 
+class Refunds extends ReactComponent {
+
+    constructor(props) {
+        super(props);
+        this.state = {
+             error: false
+        };
+    }
+
+    render() {
+
+        console.log("refunds", this.props);
+        return <div>
+            <h3>Refunds</h3>
+        </div>
+
+    }    
+
+}    
+
 class TableDisplay extends ReactComponent {
 
     constructor(props) {
@@ -170,9 +190,9 @@ export class SalesByRegionReport extends ReactComponent {
         return `/${afterDate}/${beforeDate}`;
     }
 
-    prepareData(salesData) {
+    prepareData(data) {
         let data;
-        data = {sales: salesData};
+        data = {sales: data.sales, refunds: data.refunds};
         data.loading = false;
         return data;
     }
@@ -214,8 +234,12 @@ export class SalesByRegionReport extends ReactComponent {
             return <Fragment>
                 {reportFilters}   
                 {(Array.isArray(this.state.data.sales) && this.state.data.sales.length == 0) ? 
-                <p>No results for this date range. Please try another date range.</p> : 
+                <p>No Sales results for this date range. </p> : 
                 <TableDisplay currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
+
+                {(Array.isArray(this.state.data.refunds) && this.state.data.refunds.length == 0) ? 
+                <p>No refunds were made in this date range. </p> : 
+                <Refunds currency={storeCurrencySetting.symbol} {...this.state.data.refunds}></Refunds>}  
             </Fragment>
         }
     }

@@ -111,10 +111,10 @@ function get_orders(WP_REST_Request $request)
     );
 
     //DEBUG
-        $the_object = new WP_Query($args);
+       // $the_object = new WP_Query($args);
 
     // show the mysql as a string
-        echo $the_object->request;
+        //echo $the_object->request;
         //( wp_posts.post_date >= '2021-11-01 00:00:00' AND wp_posts.post_date <= '2021-11-24 23:59:59' )
 
     //DEBUG
@@ -146,30 +146,11 @@ function get_orders(WP_REST_Request $request)
 
     if (!empty($income))
     {
-        $refunds = array();
-        $idsList = implode(",", $ids);
-        $refundSql = <<<EOT
-        SELECT p.ID, pm.meta_value, p.post_parent FROM {$pref}posts p
-        INNER JOIN {$pref}postmeta pm ON p.ID = pm.post_id WHERE p.post_parent
-        wp_posts.post_date >= '{$start_date}' AND wp_posts.post_date <= '{$end_date}'
-          AND p.post_status = "wc-completed" and p.post_type 
-         = "shop_order_refund" AND pm.meta_key = '_refund_amount';
-EOT;
-       
-        //check null for zero? 
-        $refundSql = "SELECT p.ID, pm.meta_value, p.post_parent FROM " . $pref . "posts p INNER JOIN " . 
-            $pref . "postmeta pm ON p.ID = pm.post_id WHERE wp_posts.post_date >= '%s' AND wp_posts.post_date <= '%s " .
-            " AND p.post_status = 'wc-completed' and p.post_type = 'shop_order_refund' AND " .
-            " pm.meta_key = '_refund_amount'" ;
-        $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$start_date, $end_date]));
-        var_dump($refunds);
-       
-        
 
 
         /* don't deduct refunds - show them as separate data
          -- because the refund could happen in a later time period 
-         -- this method would miss these refunds
+          this method would miss these refunds
         if (!empty($refunds))
         {
             foreach($income as $postId => &$postData)
@@ -194,13 +175,12 @@ EOT;
                 }
             }
         }
-        unset($postData);
+        
         */
       
         $ukTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $euTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $rowTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
-        
 
         $uk = array("GB");
         $wcCountries = new WC_Countries();
@@ -233,11 +213,11 @@ EOT;
         }
 
         $result = array();
-        $result["uk"] = $ukTotals;
-        $result["eu"] = $euTotals;
-        $result["row"] = $rowTotals;
+        $result["sales"] = array();
+        $result["sales"]["uk"] = $ukTotals;
+        $result["sales"]["eu"] = $euTotals;
+        $result["sales"]["row"] = $rowTotals;
 
-        
         foreach($result as $region => &$values)
         {
             foreach($values as $key => &$value)  
@@ -248,11 +228,49 @@ EOT;
         }
         unset($values);
 
+        
+            
+        
+       
+       
+  
+
     }
     else
     {
         $result = array();
+        $result["sales"] = array();
     }
+
+    //REFUNDS
+    //http://dev.parkrecords.com/wp-admin/post.php?post=4616&action=edit
+    //this gets refund posts in same time period
+    //joins to postmeta to get amount
+    //rejoins to posts to get parent post original order
+    //then joins this to meta to get name and billing country
+    //source order post id / amount / name / bill-country
+
+         $refundSql = "SELECT pp.ID as 'Order', pm.meta_value as 'Amount', " .
+         " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'Billing Country'" .
+         " FROM " . $pref . "posts p INNER JOIN " . 
+         $pref . "postmeta pm ON p.ID = pm.post_id INNER JOIN " . $pref . "posts pp ON p.post_parent " .
+         " = pp.ID INNER JOIN " . $pref . "postmeta pmparent ON pmparent.post_id = pp.ID " .
+         " INNER JOIN " . $pref . "postmeta pmparent2 ON pmparent2.post_id = pp.ID" .
+         " WHERE p.post_date >= '%s' AND p.post_date <= '%s' " .
+         " AND p.post_status = 'wc-completed' and p.post_type = 'shop_order_refund' AND " .
+         " pm.meta_key = '_refund_amount' AND pmparent.meta_key = '_billing_last_name' AND " .
+         " pmparent2.meta_key = '_billing_country'" ;
+        
+        $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$start_date, $end_date]));
+        if (is_null($refunds))
+        {
+            $result["refunds"] = array();
+        }
+        else
+        {
+            $result["refunds"] = $refunds;   
+        }
+        
 
  
     //investigate sql
