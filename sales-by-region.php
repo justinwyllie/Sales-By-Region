@@ -142,7 +142,9 @@ function get_orders(WP_REST_Request $request)
 
     global $wpdb;
 
-    $pref = $wpdb->prefix;;
+    $pref = $wpdb->prefix;
+
+
 
     if (!empty($income))
     {
@@ -212,13 +214,16 @@ function get_orders(WP_REST_Request $request)
             }
         }
 
+     
         $result = array();
         $result["sales"] = array();
         $result["sales"]["uk"] = $ukTotals;
         $result["sales"]["eu"] = $euTotals;
         $result["sales"]["row"] = $rowTotals;
 
-        foreach($result as $region => &$values)
+      
+        
+        foreach($result["sales"] as $region => &$values)
         {
             foreach($values as $key => &$value)  
             {
@@ -226,18 +231,18 @@ function get_orders(WP_REST_Request $request)
             } 
             unset($value);
         }
+        
         unset($values);
 
         
-            
-        
-       
+          
        
   
 
     }
     else
     {
+      
         $result = array();
         $result["sales"] = array();
     }
@@ -250,8 +255,8 @@ function get_orders(WP_REST_Request $request)
     //then joins this to meta to get name and billing country
     //source order post id / amount / name / bill-country
 
-         $refundSql = "SELECT pp.ID as 'Order', pm.meta_value as 'Amount', " .
-         " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'Billing Country'" .
+         $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%y') as 'refundDate', pm.meta_value as 'Amount', " .
+         " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'billingCountry'" .
          " FROM " . $pref . "posts p INNER JOIN " . 
          $pref . "postmeta pm ON p.ID = pm.post_id INNER JOIN " . $pref . "posts pp ON p.post_parent " .
          " = pp.ID INNER JOIN " . $pref . "postmeta pmparent ON pmparent.post_id = pp.ID " .

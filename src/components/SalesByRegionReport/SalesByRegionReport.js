@@ -20,11 +20,39 @@ class Refunds extends ReactComponent {
     }
 
     render() {
-
         console.log("refunds", this.props);
-        return <div>
-            <h3>Refunds</h3>
-        </div>
+        const tableHeaders = [
+            {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'amount', label: 'Amount (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'date', label: 'Date of refund (d-m-y)', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'billing-country', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true}
+        ];
+
+        const tableRows = new Array();
+        for (const refund of this.props.refunds)
+        {
+            let orderNo = refund.Order;
+            let href= "/wp-admin/post.php?post=" + orderNo + "&action=edit";
+            let link = <a href={href}>{orderNo}</a>;
+            tableRows.push( [
+                {display: link },
+                {display: refund.Amount},
+                {display: refund.refundDate},
+                {display: refund.Customer},
+                {display: refund.billingCountry }
+            ] );
+        }
+        
+        return <Fragment>
+            <TableCard 
+                    title="Refunds"
+                    rows={tableRows}
+                    headers={tableHeaders}
+                    rowsPerPage={100}
+                    totalRows={tableRows.length}>
+                 </TableCard>
+            </Fragment>
 
     }    
 
@@ -102,7 +130,7 @@ class TableDisplay extends ReactComponent {
     }  
 
     render() {
-
+        console.log("table display", this.props);
         const tableHeaders = [
             {key: '-', label: '',  isSortable: false, required: true},
             {key: 'uk', label: 'UK', isLeftAligned: true, isSortable: false, required: true},
@@ -170,9 +198,9 @@ export class SalesByRegionReport extends ReactComponent {
         const queryParameters = this.getQueryParameters(dateQuery);
         const salesPath = endPoints.salesByRegion + queryParameters;
 
-        apiFetch({path: salesPath, parse: true}).then((salesData) =>
+        apiFetch({path: salesPath, parse: true}).then((fetchedData) =>
             {
-                const data = this.prepareData(salesData);
+                const data = this.prepareData(fetchedData);
                 this.setState({data: data});
                 this.setState({error: false});
             }
@@ -190,10 +218,12 @@ export class SalesByRegionReport extends ReactComponent {
         return `/${afterDate}/${beforeDate}`;
     }
 
-    prepareData(data) {
+    prepareData(salesDataParam) {
+        console.log("salesData2", salesDataParam);
         let data;
-        data = {sales: data.sales, refunds: data.refunds};
+        data = {sales: salesDataParam.sales, refunds: salesDataParam.refunds};
         data.loading = false;
+        console.log("data2", data);
         return data;
     }
 
@@ -239,7 +269,7 @@ export class SalesByRegionReport extends ReactComponent {
 
                 {(Array.isArray(this.state.data.refunds) && this.state.data.refunds.length == 0) ? 
                 <p>No refunds were made in this date range. </p> : 
-                <Refunds currency={storeCurrencySetting.symbol} {...this.state.data.refunds}></Refunds>}  
+                <Refunds currency={storeCurrencySetting.symbol} {...this.state.data}></Refunds>}  
             </Fragment>
         }
     }
