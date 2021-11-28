@@ -10,6 +10,8 @@ Additionally the plugin will also show other useful information such as payment 
 
 ## Installation and Use
 
-To build the project npm run build. See package.json. I don't think you need the woocommerce-admin extension to use the project but I used it to get started. The installation, setup and initial code was taken from this excellent tutorial: https://gorohovsky.com/extending-woocommerce-javascript-react/
+To build the project npm run build. See package.json. I don't think you need the woocommerce-admin extension to use the project but I used it to get started. Plugin folder is called sales-by-region; sales-by-region.php goes into here and the /build folder with the JS and CSS is a subfolder of this. 
+
+The installation, setup and initial code was taken from this excellent tutorial: https://gorohovsky.com/extending-woocommerce-javascript-react/
 
 
