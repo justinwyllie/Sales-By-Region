@@ -4,7 +4,7 @@ A WooCommerce Extension
 
 ## Rationale
 
-The requirement was for a report for financial (tax) purposes which would show revenue broken down by country. The built-in WooCommerce analytics did not meet the rwquirment because this system does not maintain a separate billing country for each transaction. For example; if a user places two orders in a given time period the first using Germany as a billing address and the second using the US the built-in analytics system will only record the US as the customer only has one record and it is overwritten with the last transaction. This is acceptable for sales analysis purposes but not for finanical (government) reporting.
+The requirement was for a report for financial (tax) purposes which would show revenue broken down by country. The built-in WooCommerce analytics did not meet the requirment because this system does not maintain a separate billing country for each transaction. For example; if a user places two orders in a given time period the first using Germany as a billing address and the second using the US the built-in analytics system will only record the US as the customer only has one record and it is overwritten with the last transaction. This is acceptable for sales analysis purposes but not for finanical (government) reporting.
 
 Additionally the plugin will also show other useful information such as payment method.
 
