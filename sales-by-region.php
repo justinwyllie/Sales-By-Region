@@ -336,8 +336,26 @@ function get_orders(WP_REST_Request $request)
         }
         else
         {
-            $result["refunds"] = $refunds;   
+            
+            foreach ($refunds as &$refund)   
+            {
+                if (in_array($refund->billingCountry, $uk))
+                {
+                    $refund->billingRegion = $ukText;
+                }
+                elseif (in_array($refund->billingCountry, $eu))
+                {
+                    $refund->billingRegion =  $euText;
+                }
+                else
+                {
+                    $refund->billingRegion  = $rowText;
+                }   
+            }
+            //unset($refund);
+            $result["refunds"] = $refunds;
         }
+       
         
 
  

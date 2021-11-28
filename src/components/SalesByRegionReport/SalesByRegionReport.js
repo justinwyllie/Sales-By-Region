@@ -145,7 +145,9 @@ class Refunds extends ReactComponent {
             {key: 'amount', label: 'Amount (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'date', label: 'Date of refund (d-m-y)', isLeftAligned: true, isSortable: false, required: true},
             {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
-            {key: 'billing-country', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true}
+            {key: 'billingCountry', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'billingRegion', label: 'Billing Region', isLeftAligned: true, isSortable: false, required: true}
+      
         ];
 
         const tableRows = new Array();
@@ -159,7 +161,8 @@ class Refunds extends ReactComponent {
                 {display: refund.Amount},
                 {display: refund.refundDate},
                 {display: refund.Customer},
-                {display: refund.billingCountry }
+                {display: refund.billingCountry },
+                {display: refund.billingRegion }
             ] );
         }
         
