@@ -180,6 +180,8 @@ function get_orders(WP_REST_Request $request)
         $listingDetail['Name'] = $name;
         $listingDetail['amountGoods'] = number_format($goodsTotal, 2);
         $listingDetail['amountTotal'] = number_format($orderTotal, 2);
+        $date = new DateTime($completedDate);
+        $completedDate = date_format($date,"Y-m-d");
         $listingDetail['completedDate'] = $completedDate;
         $listingDetail['billingCountry'] = $billingCountry;
 
@@ -318,7 +320,7 @@ function get_orders(WP_REST_Request $request)
     //then joins this to meta to get name and billing country
     //source order post id / amount / name / bill-country
 
-         $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%y') as 'refundDate', pm.meta_value as 'Amount', " .
+         $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%Y-%m-%e') as 'refundDate', pm.meta_value as 'Amount', " .
          " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'billingCountry'" .
          " FROM " . $pref . "posts p INNER JOIN " . 
          $pref . "postmeta pm ON p.ID = pm.post_id INNER JOIN " . $pref . "posts pp ON p.post_parent " .

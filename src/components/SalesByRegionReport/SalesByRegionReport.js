@@ -44,13 +44,51 @@ class LineListing extends ReactComponent {
         }
         return header;
     }
-
+    /* TODO sort by dates and display in preferred format */
     sort(data, column, sortOrder) {
+        
         const appliedSortOrder = sortOrder === 'asc' ? 1 : -1;
         return data.sort((a, b) => {
-            if (a[column] > b[column]) return appliedSortOrder;
-            if (a[column] < b[column]) return -1 * appliedSortOrder;
-            return 0;
+                      
+            let origA = a[column];
+            let origB = b[column];
+            if (column == "completedDate") 
+            {
+                a[column] = new Date(a[column]);
+                b[column] = new Date(b[column]);  
+            }
+            
+            if (a[column] > b[column]) 
+            {
+                if (column == "completedDate") 
+                {
+                    a[column] = origA;
+                    b[column] = origB;    
+                }
+                return appliedSortOrder;    
+            }
+            
+            if (a[column] < b[column]) 
+            {
+                if (column == "completedDate") 
+                {
+                    a[column] = origA;
+                    b[column] = origB;    
+                }
+                return -1 * appliedSortOrder;
+            }
+
+            if (1==1) 
+            {
+                if (column == "completedDate") 
+                {
+                    a[column] = origA;
+                    b[column] = origB;    
+                }
+                return 0;
+            }
+            
+            
         });
     }
 
@@ -84,7 +122,7 @@ class LineListing extends ReactComponent {
         const tableHeaders = [
             {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
             {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
-            {key: 'completedDate', label: 'Capture Date (d-m-y hh:mm:ss)', isLeftAligned: false, isSortable: true, required: true},
+            {key: 'completedDate', label: 'Capture Date (y-m-d)', isLeftAligned: false, isSortable: true, required: true},
             {key: 'amountGoods', label: 'Amount Goods (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'amountTotal', label: 'Amount Total (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billing-country', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
@@ -143,7 +181,7 @@ class Refunds extends ReactComponent {
         const tableHeaders = [
             {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
             {key: 'amount', label: 'Amount (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
-            {key: 'date', label: 'Date of refund (d-m-y)', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'date', label: 'Date of refund (y-m-d)', isLeftAligned: true, isSortable: false, required: true},
             {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billingCountry', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billingRegion', label: 'Billing Region', isLeftAligned: true, isSortable: false, required: true}
