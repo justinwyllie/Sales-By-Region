@@ -44,7 +44,9 @@ class LineListing extends ReactComponent {
         }
         return header;
     }
-    /* TODO sort by dates and display in preferred format */
+    /* TODO sort by dates and display in preferred format 
+    maybe possible to reformat the dates in JS just before display? either
+    here or in a lifecycle method?*/
     sort(data, column, sortOrder) {
         
         const appliedSortOrder = sortOrder === 'asc' ? 1 : -1;
