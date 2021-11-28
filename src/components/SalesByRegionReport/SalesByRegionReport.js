@@ -45,52 +45,39 @@ class LineListing extends ReactComponent {
         return header;
     }
     /* TODO sort by dates and display in preferred format 
-    maybe possible to reformat the dates in JS just before display? either
-    here or in a lifecycle method?*/
+     or something manual like use d-m-Y from PHP and 
+    mnanually fix that here in a function then Date()*/
     sort(data, column, sortOrder) {
+
+        const upDate = (val) =>
+        {
+            if (column == "completedDate")
+            {
+                let newVal = val.split("-").reverse().join("-"); //d-m-Y to Y-m-d
+                let newValDate = new Date(newVal);
+                return newValDate;
+            }
+            else
+            {
+                return val;
+            }
+
+        }
         
         const appliedSortOrder = sortOrder === 'asc' ? 1 : -1;
         return data.sort((a, b) => {
-                      
-            let origA = a[column];
-            let origB = b[column];
-            if (column == "completedDate") 
+ 
+            if (upDate(a[column]) > upDate(b[column])) 
             {
-                a[column] = new Date(a[column]);
-                b[column] = new Date(b[column]);  
-            }
-            
-            if (a[column] > b[column]) 
-            {
-                if (column == "completedDate") 
-                {
-                    a[column] = origA;
-                    b[column] = origB;    
-                }
                 return appliedSortOrder;    
             }
             
-            if (a[column] < b[column]) 
+            if (upDate(a[column]) < upDate(b[column])) 
             {
-                if (column == "completedDate") 
-                {
-                    a[column] = origA;
-                    b[column] = origB;    
-                }
                 return -1 * appliedSortOrder;
             }
-
-            if (1==1) 
-            {
-                if (column == "completedDate") 
-                {
-                    a[column] = origA;
-                    b[column] = origB;    
-                }
-                return 0;
-            }
-            
-            
+            return 0;
+  
         });
     }
 
@@ -124,7 +111,7 @@ class LineListing extends ReactComponent {
         const tableHeaders = [
             {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
             {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
-            {key: 'completedDate', label: 'Capture Date (y-m-d)', isLeftAligned: false, isSortable: true, required: true},
+            {key: 'completedDate', label: 'Capture Date (d-m-y)', isLeftAligned: false, isSortable: true, required: true},
             {key: 'amountGoods', label: 'Amount Goods (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'amountTotal', label: 'Amount Total (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billing-country', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
@@ -183,7 +170,7 @@ class Refunds extends ReactComponent {
         const tableHeaders = [
             {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
             {key: 'amount', label: 'Amount (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
-            {key: 'date', label: 'Date of refund (y-m-d)', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'date', label: 'Date of refund (d-m-y)', isLeftAligned: true, isSortable: false, required: true},
             {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billingCountry', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billingRegion', label: 'Billing Region', isLeftAligned: true, isSortable: false, required: true}
