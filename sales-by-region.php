@@ -95,7 +95,7 @@ function get_orders(WP_REST_Request $request)
     
     $start_date = urldecode($request['start_date']);
     $end_date = urldecode($request['end_date']);
-
+/*
     $args = array(
         
         'numberposts' => -1,
@@ -108,10 +108,33 @@ function get_orders(WP_REST_Request $request)
             'inclusive' => true
             ) 
             
-    );
+    ); 
+*/
+   //post date is date of order placed. completed_date is date of capture of payment
+   //current setup for Paypal as we only auth. payment when cust shops we need to
+   //get the payment completed date - this is date of capture of payment
+   
+    $args = array(
+        
+        'numberposts' => -1,
+        "post_type"        => "shop_order",
+        'post_status' => "wc-completed",
+        "fields" => "all",
+        "orderBy" => "_completed_date",
+        "order" => "ASC",
+        'meta_query' => array(
+            array(
+                'key'     => '_completed_date',
+                'value'   => array($start_date, $end_date),
+                'compare' => 'BETWEEN',
+                'type'=>'DATE'
+            )
+        )
+    ); 
+
 
     //DEBUG
-       // $the_object = new WP_Query($args);
+       //$the_object = new WP_Query($args);
 
     // show the mysql as a string
         //echo $the_object->request;
@@ -121,20 +144,61 @@ function get_orders(WP_REST_Request $request)
 
     $posts = get_posts( $args );
 
-    
     $income = array();
-    $ids = array();
+    $lineListing = array();
+
+    $uk = array("GB");
+    $wcCountries = new WC_Countries();
+    $eu = $wcCountries->get_european_union_countries();
+    $ukText = "UK";
+    $euText = "EU";
+    $rowText = "ROW";
+    
     //TODO - this could be better done with a filter. But does not seem to be a problem now.
     //$start = hrtime(true);
-    foreach($posts as $id) 
+    foreach($posts as $post) 
     {
+        $id = $post->ID;
         $orderTotal = get_post_meta($id, '_order_total', true);
         $ids[] = $id;
         $orderShipping = get_post_meta($id, '_order_shipping', true);
+        $orderShipping = round($orderShipping, 2);
+        $orderTotal = round($orderTotal, 2);
+        $completedDate = get_post_meta($id, '_completed_date', true);
+        $name = get_post_meta($id, '_billing_last_name', true);
+        $paymentMethod = get_post_meta($id, '_payment_method', true);
         $billingCountry = get_post_meta($id, '_billing_country', true);
         $goodsTotal = $orderTotal - $orderShipping;
+        $goodsTotal = round($goodsTotal, 2);
         $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
            "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry); 
+
+        
+
+        $listingDetail = array();
+        $listingDetail['Order'] = $id;
+        $listingDetail['Name'] = $name;
+        $listingDetail['amountGoods'] = number_format($goodsTotal, 2);
+        $listingDetail['amountTotal'] = number_format($orderTotal, 2);
+        $listingDetail['completedDate'] = $completedDate;
+        $listingDetail['billingCountry'] = $billingCountry;
+
+        if (in_array($billingCountry, $uk))
+        {
+            $listingDetail['region'] = $ukText;
+        }
+        elseif (in_array($billingCountry, $eu))
+        {
+            $listingDetail['region'] = $euText;
+        }
+        else
+        {
+            $listingDetail['region'] = $rowText;
+        }
+        $listingDetail['paymentMethod'] = $paymentMethod;
+        
+        $lineListing[] = $listingDetail;
+
     }
     //$end = hrtime(true);
     //echo "TIMETORUN";
@@ -184,9 +248,7 @@ function get_orders(WP_REST_Request $request)
         $euTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $rowTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
 
-        $uk = array("GB");
-        $wcCountries = new WC_Countries();
-        $eu = $wcCountries->get_european_union_countries();
+        
         $row = array();
 
         foreach($income as $postId => $postData )
@@ -220,9 +282,8 @@ function get_orders(WP_REST_Request $request)
         $result["sales"]["uk"] = $ukTotals;
         $result["sales"]["eu"] = $euTotals;
         $result["sales"]["row"] = $rowTotals;
+        $result["lineListing"] = $lineListing;
 
-      
-        
         foreach($result["sales"] as $region => &$values)
         {
             foreach($values as $key => &$value)  
@@ -235,7 +296,7 @@ function get_orders(WP_REST_Request $request)
         unset($values);
 
         
-          
+
        
   
 
@@ -245,6 +306,8 @@ function get_orders(WP_REST_Request $request)
       
         $result = array();
         $result["sales"] = array();
+        $result["lineListing"] = array();
+        
     }
 
     //REFUNDS

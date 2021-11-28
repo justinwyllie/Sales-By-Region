@@ -5,10 +5,129 @@ import {default as Currency} from '@woocommerce/currency';
 import {CURRENCY as storeCurrencySetting} from '@woocommerce/settings'; 
 import apiFetch from '@wordpress/api-fetch';    
 
+/*
+https://gorohovsky.com/extending-woocommerce-javascript-react/
+https://github.com/woocommerce/woocommerce-admin/blob/main/client/analytics/components/report-table/index.js 
+*/
+
 function DisplayError(props)
 {
     return <p className="salesByRegionError">{props.message}</p>; 
 }
+
+class LineListing extends ReactComponent {
+
+    constructor(props) {
+        super(props);
+        this.handleSort = this.handleSort.bind(this);
+         
+       const defaultSortColumn = 'completedDate';
+       
+       const defaultSortOrder = 'asc';
+       const lineListingSortedByDefault = this.sort(this.props.lineListing, defaultSortColumn, defaultSortOrder);
+
+       this.state = {
+        error: false,   
+        lineListingData: lineListingSortedByDefault,
+        sortColumn: defaultSortColumn,
+        sortOrder: defaultSortOrder
+        }
+    }
+
+    setHeaderSortOptions(header) {
+        if (header.key === this.state.sortColumn) {
+            header.defaultSort = true;
+            header.defaultOrder = this.state.sortOrder;
+        } else {
+            if (header.defaultSort) delete header.defaultSort;
+            if (header.defaultOrder) delete header.defaultOrder;
+        }
+        return header;
+    }
+
+    sort(data, column, sortOrder) {
+        const appliedSortOrder = sortOrder === 'asc' ? 1 : -1;
+        return data.sort((a, b) => {
+            if (a[column] > b[column]) return appliedSortOrder;
+            if (a[column] < b[column]) return -1 * appliedSortOrder;
+            return 0;
+        });
+    }
+
+    changeSortOrder(order) {
+        return order === 'asc' ? 'desc' : 'asc';
+    }
+
+    handleSort(newSortColumn) {
+        let {lineListingData, sortColumn, sortOrder} = this.state;
+        if (sortColumn === newSortColumn) {
+            lineListingData.reverse();
+            sortOrder = this.changeSortOrder(sortOrder);
+        }
+        else {
+            sortColumn = newSortColumn;
+            lineListingData = this.sort(lineListingData, sortColumn, sortOrder);
+        }
+        this.setState({
+            lineListingData: lineListingData,
+            sortColumn: sortColumn,
+            sortOrder: sortOrder,
+         });
+    }
+
+    
+
+    render() {
+        
+        const lineListingData = this.state.lineListingData;
+
+        const tableHeaders = [
+            {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'completedDate', label: 'Capture Date (d-m-y hh:mm:ss)', isLeftAligned: false, isSortable: true, required: true},
+            {key: 'amountGoods', label: 'Amount Goods (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'amountTotal', label: 'Amount Total (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'billing-country', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'region', label: 'Region', isLeftAligned: true, isSortable: true, required: true},
+            {key: 'payment-method', label: 'Payment Method', isLeftAligned: true, isSortable: false, required: true}
+
+       ];
+
+        const tableRows = new Array();
+        for (const lineListing of lineListingData)
+        {
+            let orderNo = lineListing.Order;
+            let href= "/wp-admin/post.php?post=" + orderNo + "&action=edit";
+            let link = <a href={href}>{orderNo}</a>;
+            tableRows.push( [
+                {key: 'order', display: link },
+                {key: 'customer', display: lineListing.Name},
+                {key: 'completedDate', display: lineListing.completedDate},
+                {key: 'amountGoods', display: lineListing.amountGoods},
+                {key: 'amountTotal', display: lineListing.amountTotal},
+                {key: 'billing-country', display: lineListing.billingCountry },
+                {key: 'region', display: lineListing.region },
+                {key: 'payment-method', display: lineListing.paymentMethod }
+            ] );
+        }
+        
+        return <Fragment>
+            <div className="salesByRegion">
+                <TableCard 
+                    title="Revenue Details"
+                    rows={tableRows}
+                    headers={tableHeaders.map(header => this.setHeaderSortOptions(header))}
+                    rowsPerPage={10000}
+                    totalRows={tableRows.length}
+                    onSort={this.handleSort}
+                    >
+                 </TableCard>
+            </div>
+            </Fragment>
+
+    }    
+
+} 
 
 class Refunds extends ReactComponent {
 
@@ -20,7 +139,7 @@ class Refunds extends ReactComponent {
     }
 
     render() {
-        console.log("refunds", this.props);
+        
         const tableHeaders = [
             {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
             {key: 'amount', label: 'Amount (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
@@ -49,7 +168,7 @@ class Refunds extends ReactComponent {
                     title="Refunds"
                     rows={tableRows}
                     headers={tableHeaders}
-                    rowsPerPage={100}
+                    rowsPerPage={1000}
                     totalRows={tableRows.length}>
                  </TableCard>
             </Fragment>
@@ -130,7 +249,7 @@ class TableDisplay extends ReactComponent {
     }  
 
     render() {
-        console.log("table display", this.props);
+        
         const tableHeaders = [
             {key: '-', label: '',  isSortable: false, required: true},
             {key: 'uk', label: 'UK', isLeftAligned: true, isSortable: false, required: true},
@@ -154,7 +273,7 @@ class TableDisplay extends ReactComponent {
         else
         {
         return <TableCard 
-                    title="Sales Revenue Summary"
+                    title="Sales Revenue Summary (excluding refunds)"
                     rows={tableRows}
                     headers={tableHeaders}
                     rowsPerPage={100}
@@ -207,7 +326,7 @@ export class SalesByRegionReport extends ReactComponent {
         )
         .catch( (err) => {
             this.setState({error: true});
-            console.log(err);
+            
         })
      }
 
@@ -219,11 +338,12 @@ export class SalesByRegionReport extends ReactComponent {
     }
 
     prepareData(salesDataParam) {
-        console.log("salesData2", salesDataParam);
+        
         let data;
-        data = {sales: salesDataParam.sales, refunds: salesDataParam.refunds};
+        data = {sales: salesDataParam.sales, refunds: salesDataParam.refunds, 
+            lineListing: salesDataParam.lineListing };
         data.loading = false;
-        console.log("data2", data);
+        
         return data;
     }
 
@@ -264,11 +384,15 @@ export class SalesByRegionReport extends ReactComponent {
             return <Fragment>
                 {reportFilters}   
                 {(Array.isArray(this.state.data.sales) && this.state.data.sales.length == 0) ? 
-                <p>No Sales results for this date range. </p> : 
+                <h2>No Sales results for this date range. </h2> : 
                 <TableDisplay currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
 
+                {(Array.isArray(this.state.data.lineListing) && this.state.data.lineListing.length == 0) ? 
+                <h2>No details available. If you can see totals above this is probably an error. </h2> : 
+                <LineListing currency={storeCurrencySetting.symbol} {...this.state.data}></LineListing>} 
+
                 {(Array.isArray(this.state.data.refunds) && this.state.data.refunds.length == 0) ? 
-                <p>No refunds were made in this date range. </p> : 
+                <h2>No refunds were made in this date range. </h2> : 
                 <Refunds currency={storeCurrencySetting.symbol} {...this.state.data}></Refunds>}  
             </Fragment>
         }
