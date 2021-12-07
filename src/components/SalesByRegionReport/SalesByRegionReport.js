@@ -141,7 +141,7 @@ class LineListing extends ReactComponent {
         return <Fragment>
             <div className="salesByRegion">
                 <TableCard 
-                    title="Revenue Details"
+                    title={this.props.heading}
                     rows={tableRows}
                     headers={tableHeaders.map(header => this.setHeaderSortOptions(header))}
                     rowsPerPage={10000}
@@ -303,7 +303,7 @@ class TableDisplay extends ReactComponent {
         else
         {
         return <TableCard 
-                    title="Sales Revenue Summary (excluding refunds)"
+                    title={this.props.heading}
                     rows={tableRows}
                     headers={tableHeaders}
                     rowsPerPage={100}
@@ -370,8 +370,13 @@ export class SalesByRegionReport extends ReactComponent {
     prepareData(salesDataParam) {
         
         let data;
-        data = {sales: salesDataParam.sales, refunds: salesDataParam.refunds, 
-            lineListing: salesDataParam.lineListing };
+        data = {
+            sales: salesDataParam.combinedTotals.sales, 
+            salesByPaymentMethod: salesDataParam.totalsByPaymentMethod.sales, 
+            refunds: salesDataParam.refunds, 
+            lineListing: salesDataParam.lineListing, 
+            lineListingByPaymentMethod: salesDataParam.lineListingByPaymentMethod.sales  
+        };
         data.loading = false;
         
         return data;
@@ -413,16 +418,24 @@ export class SalesByRegionReport extends ReactComponent {
         {
             return <Fragment>
                 {reportFilters}   
+
+                <h2>Summaries Combined</h2>
                 {(Array.isArray(this.state.data.sales) && this.state.data.sales.length == 0) ? 
-                <h2>No Sales results for this date range. </h2> : 
-                <TableDisplay currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
+                <h3>No Sales results for this date range. </h3> : 
+                <TableDisplay heading="Sales Revenue Summary (excluding refunds) - Combined" currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
 
+                <h2>Summaries by Payment Method</h2>
+
+                <h2>Detailed Listing Combined</h2>    
                 {(Array.isArray(this.state.data.lineListing) && this.state.data.lineListing.length == 0) ? 
-                <h2>No details available. If you can see totals above this is probably an error. </h2> : 
-                <LineListing currency={storeCurrencySetting.symbol} {...this.state.data}></LineListing>} 
+                <h3>No details available. If you can see totals above this is probably an error. </h3> : 
+                <LineListing heading="Revenue Details - Combined" currency={storeCurrencySetting.symbol} {...this.state.data}></LineListing>} 
 
+                <h2>Detailed Listing By Payment Method</h2>
+
+                <h2>Refunds during this period</h2>    
                 {(Array.isArray(this.state.data.refunds) && this.state.data.refunds.length == 0) ? 
-                <h2>No refunds were made in this date range. </h2> : 
+                <h3>No refunds were made in this date range. </h3> : 
                 <Refunds currency={storeCurrencySetting.symbol} {...this.state.data}></Refunds>}  
             </Fragment>
         }

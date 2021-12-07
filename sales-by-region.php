@@ -145,7 +145,9 @@ function get_orders(WP_REST_Request $request)
     $posts = get_posts( $args );
 
     $income = array();
+    $incomeByPaymentMethod = array();
     $lineListing = array();
+    $lineListingByPaymentMethod = array();
 
     $uk = array("GB");
     $wcCountries = new WC_Countries();
@@ -156,6 +158,8 @@ function get_orders(WP_REST_Request $request)
     
     //TODO - this could be better done with a filter. But does not seem to be a problem now.
     //$start = hrtime(true);
+    //go through data and create two data structures: one which combines 
+    //payment methods and one which separates them 
     foreach($posts as $post) 
     {
         $id = $post->ID;
@@ -170,11 +174,10 @@ function get_orders(WP_REST_Request $request)
         $billingCountry = get_post_meta($id, '_billing_country', true);
         $goodsTotal = $orderTotal - $orderShipping;
         $goodsTotal = round($goodsTotal, 2);
-        $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
-           "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry); 
-
         
 
+        
+        //combined
         $listingDetail = array();
         $listingDetail['Order'] = $id;
         $listingDetail['Name'] = $name;
@@ -200,8 +203,22 @@ function get_orders(WP_REST_Request $request)
         $listingDetail['paymentMethod'] = $paymentMethod;
         
         $lineListing[] = $listingDetail;
+        $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
+           "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry); 
+
+        //separated
+        $lineListingByPaymentMethod[$paymentMethod] = $listingDetail;
+        if (! isset($incomeByPaymentMethod[$paymentMethod]))
+        {
+            $incomeByPaymentMethod[$paymentMethod] = array();
+        }
+        $incomeByPaymentMethod[$paymentMethod][$id] = array("_order_total" => $orderTotal, 
+            "_order_shipping" => $orderShipping,
+           "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry);  
 
     }
+
+ 
     //$end = hrtime(true);
     //echo "TIMETORUN";
     //echo ($end - $start) / 1000000;      // Milliseconds
@@ -210,47 +227,25 @@ function get_orders(WP_REST_Request $request)
 
     $pref = $wpdb->prefix;
 
+    //set the result structure
+    $result = array();
+    $result["lineListing"] = $lineListing;
+    $result["lineListingByPaymentMethod"] = $lineListingByPaymentMethod;
+    $result["combinedTotals"] = array();
+    $result["totalsByPaymentMethod"] = array();
+    $paymentMethods = array_keys($incomeByPaymentMethod);
 
-
-    if (!empty($income))
+    //create overall totals for combined data and for separated data
+    /**
+     * @param $rows - array of arrays of orders with details
+     * @return an array with totals for uk, eu and row
+     */
+    function calculateTotals($rows)
     {
-
-
-        /* don't deduct refunds - show them as separate data
-         -- because the refund could happen in a later time period 
-          this method would miss these refunds
-        if (!empty($refunds))
-        {
-            foreach($income as $postId => &$postData)
-            {
-                foreach($refunds as $row => $data)
-                {
-                    if ($data->post_parent == $postId)
-                    {
-                        $refundAmount = $data->meta_value;
-                        //take it off the goods first
-                        if ($refundAmount <= $postData["_goods_net"])
-                        {
-                            $postData["_goods_net"] = $postData["_goods_net"] - $refundAmount;
-                        }
-                        else
-                        {
-                            $excessOverNetGoods = $refundAmount - $postData["_goods_net"];
-                            $postData["_goods_net"] =  0;
-                            $postData["_order_shipping"] = $postData["_order_shipping"] - $excessOverNetGoods;
-                        }
-                    }
-                }
-            }
-        }
-        
-        */
-      
         $ukTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $euTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $rowTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
 
-        
         $row = array();
 
         foreach($income as $postId => $postData )
@@ -278,13 +273,11 @@ function get_orders(WP_REST_Request $request)
             }
         }
 
-     
-        $result = array();
         $result["sales"] = array();
         $result["sales"]["uk"] = $ukTotals;
         $result["sales"]["eu"] = $euTotals;
         $result["sales"]["row"] = $rowTotals;
-        $result["lineListing"] = $lineListing;
+        
 
         foreach($result["sales"] as $region => &$values)
         {
@@ -294,23 +287,22 @@ function get_orders(WP_REST_Request $request)
             } 
             unset($value);
         }
-        
         unset($values);
 
-        
-
-       
-  
-
+        return $result; 
     }
-    else
+    
+    if (!empty($income))
     {
-      
-        $result = array();
-        $result["sales"] = array();
-        $result["lineListing"] = array();
-        
+        $result["combinedTotals"] = calculateTotals($income);
     }
+    if (!empty($incomeByPaymentMethod))
+    {   foreach ($paymentMethods as $method)
+        {
+            $result["totalsByPaymentMethod"][$method] = calculateTotals($incomeByPaymentMethod[$method]);
+        }
+    }
+   
 
     //REFUNDS
     //http://dev.parkrecords.com/wp-admin/post.php?post=4616&action=edit
