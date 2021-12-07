@@ -265,16 +265,18 @@ class TableDisplay extends ReactComponent {
     }
 
     componentDidUpdate() {
+        console.log("aaa", this.props);
         if (!this.state.error)
         {
-            this.testRender();
+            //this.testRender();
         }   
     }    
 
     componentDidMount() {
+        console.log("aaa2", this.props);
         if (!this.state.error)
         {
-            this.testRender();
+            //this.testRender();
         }
     }  
 
@@ -298,6 +300,7 @@ class TableDisplay extends ReactComponent {
 
         if (this.state.error)
         {
+            console.log("err", this.state);
             return <DisplayError message="Sorry. An error has occurred. Please contact support." />
         }
         else
@@ -368,17 +371,18 @@ export class SalesByRegionReport extends ReactComponent {
     }
 
     prepareData(salesDataParam) {
-        
+        console.log("salesDataParam", salesDataParam);
         let data;
         data = {
             sales: salesDataParam.combinedTotals.sales, 
-            salesByPaymentMethod: salesDataParam.totalsByPaymentMethod.sales, 
+            salesByPaymentMethod: salesDataParam.totalsByPaymentMethod, 
             refunds: salesDataParam.refunds, 
             lineListing: salesDataParam.lineListing, 
-            lineListingByPaymentMethod: salesDataParam.lineListingByPaymentMethod.sales  
+            lineListingByPaymentMethod: salesDataParam.lineListingByPaymentMethod ,
+            paymentMethods : salesDataParam.paymentMethods
         };
         data.loading = false;
-        
+        console.log("data", data);
         return data;
     }
 
@@ -419,21 +423,45 @@ export class SalesByRegionReport extends ReactComponent {
             return <Fragment>
                 {reportFilters}   
 
-                <h2>Summaries Combined</h2>
-                {(Array.isArray(this.state.data.sales) && this.state.data.sales.length == 0) ? 
-                <h3>No Sales results for this date range. </h3> : 
-                <TableDisplay heading="Sales Revenue Summary (excluding refunds) - Combined" currency={storeCurrencySetting.symbol} {...this.state.data}></TableDisplay>}
+               
+                {(typeof this.state.data.sales != 'undefined') ? 
+                <TableDisplay heading="Sales Revenue Summary (excluding refunds) - Combined" 
+                        sales={this.state.data.sales}
+                        currency={storeCurrencySetting.symbol} {...this.state.data.sales}></TableDisplay> :
+                 <h3>No Sales results for this date range. </h3>}
 
-                <h2>Summaries by Payment Method</h2>
+                
+                {this.state.data.paymentMethods.map((method) => {
+                    return (Array.isArray(this.state.data.salesByPaymentMethod[method].sales) 
+                    && this.state.data.salesByPaymentMethod[method].sales.length == 0) ?
+                    <h3 >No Sales results for this date range. </h3>  :
+                    <TableDisplay heading={`Sales Revenue Summary (excluding refunds) - ${method}`} 
+                    currency={storeCurrencySetting.symbol} 
+                    sales={this.state.data.salesByPaymentMethod[method].sales}
+                    ></TableDisplay>
+                    
+                })}
+                
 
-                <h2>Detailed Listing Combined</h2>    
-                {(Array.isArray(this.state.data.lineListing) && this.state.data.lineListing.length == 0) ? 
+                   
+                {/*(Array.isArray(this.state.data.lineListing) && this.state.data.lineListing.length == 0) ? 
                 <h3>No details available. If you can see totals above this is probably an error. </h3> : 
-                <LineListing heading="Revenue Details - Combined" currency={storeCurrencySetting.symbol} {...this.state.data}></LineListing>} 
+                <LineListing heading="Revenue Details - Combined" currency={storeCurrencySetting.symbol} 
+                lineListing={this.state.data.lineListing}></LineListing>*/} 
 
-                <h2>Detailed Listing By Payment Method</h2>
+               
+                {this.state.data.paymentMethods.map((method) => {
+                    return this.state.data.salesByPaymentMethod[method].length == 0 ?
+                    <h3>No Sales results for this date range. </h3> :
+                    <LineListing heading={`Revenue Details - ${method}`} currency={storeCurrencySetting.symbol} 
+                    lineListing={this.state.data.lineListingByPaymentMethod[method]}
+                    ></LineListing> 
+ 
 
-                <h2>Refunds during this period</h2>    
+                })}
+
+
+          
                 {(Array.isArray(this.state.data.refunds) && this.state.data.refunds.length == 0) ? 
                 <h3>No refunds were made in this date range. </h3> : 
                 <Refunds currency={storeCurrencySetting.symbol} {...this.state.data}></Refunds>}  

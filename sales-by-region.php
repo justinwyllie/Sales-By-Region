@@ -143,11 +143,13 @@ function get_orders(WP_REST_Request $request)
     //DEBUG
 
     $posts = get_posts( $args );
+    
 
     $income = array();
     $incomeByPaymentMethod = array();
     $lineListing = array();
     $lineListingByPaymentMethod = array();
+    $paymentMethods = array();
 
     $uk = array("GB");
     $wcCountries = new WC_Countries();
@@ -171,6 +173,12 @@ function get_orders(WP_REST_Request $request)
         $completedDate = get_post_meta($id, '_completed_date', true);
         $name = get_post_meta($id, '_billing_last_name', true);
         $paymentMethod = get_post_meta($id, '_payment_method', true);
+
+        if (!in_array($paymentMethod, $paymentMethods))
+        {
+            $paymentMethods[] = $paymentMethod;    
+        }
+
         $billingCountry = get_post_meta($id, '_billing_country', true);
         $goodsTotal = $orderTotal - $orderShipping;
         $goodsTotal = round($goodsTotal, 2);
@@ -206,8 +214,7 @@ function get_orders(WP_REST_Request $request)
         $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
            "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry); 
 
-        //separated
-        $lineListingByPaymentMethod[$paymentMethod] = $listingDetail;
+        
         if (! isset($incomeByPaymentMethod[$paymentMethod]))
         {
             $incomeByPaymentMethod[$paymentMethod] = array();
@@ -217,6 +224,19 @@ function get_orders(WP_REST_Request $request)
            "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry);  
 
     }
+
+    //separated line listing 
+    foreach ($paymentMethods as $paymentMethod)
+    {
+        
+        $lineListingByPaymentMethod[$paymentMethod] = array();   
+    }
+    foreach ($lineListing as $listingDetail)
+    {
+        $lineListingByPaymentMethod[$listingDetail['paymentMethod']][] = $listingDetail;
+    }
+
+
 
  
     //$end = hrtime(true);
@@ -233,7 +253,10 @@ function get_orders(WP_REST_Request $request)
     $result["lineListingByPaymentMethod"] = $lineListingByPaymentMethod;
     $result["combinedTotals"] = array();
     $result["totalsByPaymentMethod"] = array();
-    $paymentMethods = array_keys($incomeByPaymentMethod);
+    
+    $result["paymentMethods"] = $paymentMethods;
+
+   
 
     //create overall totals for combined data and for separated data
     /**
@@ -242,17 +265,22 @@ function get_orders(WP_REST_Request $request)
      */
     function calculateTotals($rows)
     {
+        //todo why doesn't global work? 
+        $uk = array("GB");
+        $wcCountries = new WC_Countries();
+        $eu = $wcCountries->get_european_union_countries();
+       
         $ukTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $euTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
         $rowTotals = array("goods"=>0, "shipping"=>0, "total"=>0);
 
         $row = array();
 
-        foreach($income as $postId => $postData )
+        foreach($rows as $postId => $postData )
         {
             $goodsNet = $postData["_goods_net"];
             $orderShipping = $postData["_order_shipping"];
- 
+            
             if (in_array($postData["_billing_country"], $uk))
             {
                 $ukTotals["goods"] = $ukTotals["goods"] + $goodsNet ;
@@ -273,13 +301,14 @@ function get_orders(WP_REST_Request $request)
             }
         }
 
-        $result["sales"] = array();
-        $result["sales"]["uk"] = $ukTotals;
-        $result["sales"]["eu"] = $euTotals;
-        $result["sales"]["row"] = $rowTotals;
+        $ret = array();
+        $ret["sales"] = array();
+        $ret["sales"]["uk"] = $ukTotals;
+        $ret["sales"]["eu"] = $euTotals;
+        $ret["sales"]["row"] = $rowTotals;
         
 
-        foreach($result["sales"] as $region => &$values)
+        foreach($ret["sales"] as $region => &$values)
         {
             foreach($values as $key => &$value)  
             {
@@ -289,12 +318,13 @@ function get_orders(WP_REST_Request $request)
         }
         unset($values);
 
-        return $result; 
+        return $ret; 
     }
     
     if (!empty($income))
-    {
+    {   
         $result["combinedTotals"] = calculateTotals($income);
+        
     }
     if (!empty($incomeByPaymentMethod))
     {   foreach ($paymentMethods as $method)
@@ -359,6 +389,7 @@ function get_orders(WP_REST_Request $request)
     //echo $query_sql;
     //end investigate sql
     
+
     return new WP_REST_Response( $result, 200 );
     
 }
