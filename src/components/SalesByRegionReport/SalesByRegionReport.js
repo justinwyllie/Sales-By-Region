@@ -21,7 +21,7 @@ class LineListing extends ReactComponent {
         super(props);
         this.handleSort = this.handleSort.bind(this);
          
-       const defaultSortColumn = 'completedDate';
+       const defaultSortColumn = 'Order';
        
        const defaultSortOrder = 'asc';
        const lineListingSortedByDefault = this.sort(this.props.lineListing, defaultSortColumn, defaultSortOrder);
@@ -51,7 +51,13 @@ class LineListing extends ReactComponent {
 
         const upDate = (val) =>
         {
-            if (column == "completedDate")
+            if (column == "Order")
+            {
+                let newVal = parseInt(val);
+                return newVal;
+                
+            }
+            else if (column == "paidDate")
             {
                 let newVal = val.split("-").reverse().join("-"); //d-m-Y to Y-m-d
                 let newValDate = new Date(newVal);
@@ -66,6 +72,12 @@ class LineListing extends ReactComponent {
         
         const appliedSortOrder = sortOrder === 'asc' ? 1 : -1;
         return data.sort((a, b) => {
+            
+            
+            if (upDate(a[column]) == upDate(b[column]))
+            {
+                return 0;
+            }
  
             if (upDate(a[column]) > upDate(b[column])) 
             {
@@ -76,7 +88,10 @@ class LineListing extends ReactComponent {
             {
                 return -1 * appliedSortOrder;
             }
-            return 0;
+            
+            
+
+            
   
         });
     }
@@ -109,9 +124,9 @@ class LineListing extends ReactComponent {
         const lineListingData = this.state.lineListingData;
 
         const tableHeaders = [
-            {key: 'order', label: 'Order Id', isLeftAligned: true, isSortable: false, required: true},
+            {key: 'Order', label: 'Order Id', isLeftAligned: true, isSortable: true, required: true},
             {key: 'customer', label: 'Customer', isLeftAligned: true, isSortable: false, required: true},
-            {key: 'completedDate', label: 'Capture Date (d-m-y)', isLeftAligned: false, isSortable: true, required: true},
+            {key: 'paidDate', label: 'Capture Date (d-m-y)', isLeftAligned: false, isSortable: true, required: true},
             {key: 'amountGoods', label: 'Amount Goods (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'amountTotal', label: 'Amount Total (' + this.props.currency + ')', isLeftAligned: true, isSortable: false, required: true},
             {key: 'billing-country', label: 'Billing Country', isLeftAligned: true, isSortable: false, required: true},
@@ -127,9 +142,9 @@ class LineListing extends ReactComponent {
             let href= "/wp-admin/post.php?post=" + orderNo + "&action=edit";
             let link = <a href={href}>{orderNo}</a>;
             tableRows.push( [
-                {key: 'order', display: link },
+                {key: 'Order', display: link },
                 {key: 'customer', display: lineListing.Name},
-                {key: 'completedDate', display: lineListing.completedDate},
+                {key: 'paidDate', display: lineListing.paidDate},
                 {key: 'amountGoods', display: lineListing.amountGoods},
                 {key: 'amountTotal', display: lineListing.amountTotal},
                 {key: 'billing-country', display: lineListing.billingCountry },
@@ -198,7 +213,7 @@ class Refunds extends ReactComponent {
                     title="Refunds"
                     rows={tableRows}
                     headers={tableHeaders}
-                    rowsPerPage={1000}
+                    rowsPerPage={10000}
                     totalRows={tableRows.length}>
                  </TableCard>
             </Fragment>
@@ -265,7 +280,7 @@ class TableDisplay extends ReactComponent {
     }
 
     componentDidUpdate() {
-        console.log("aaa", this.props);
+        
         if (!this.state.error)
         {
             //this.testRender();
@@ -273,7 +288,7 @@ class TableDisplay extends ReactComponent {
     }    
 
     componentDidMount() {
-        console.log("aaa2", this.props);
+        
         if (!this.state.error)
         {
             //this.testRender();
@@ -300,7 +315,7 @@ class TableDisplay extends ReactComponent {
 
         if (this.state.error)
         {
-            console.log("err", this.state);
+            
             return <DisplayError message="Sorry. An error has occurred. Please contact support." />
         }
         else
@@ -371,7 +386,7 @@ export class SalesByRegionReport extends ReactComponent {
     }
 
     prepareData(salesDataParam) {
-        console.log("salesDataParam", salesDataParam);
+        
         let data;
         data = {
             sales: salesDataParam.combinedTotals.sales, 
@@ -382,7 +397,7 @@ export class SalesByRegionReport extends ReactComponent {
             paymentMethods : salesDataParam.paymentMethods
         };
         data.loading = false;
-        console.log("data", data);
+        
         return data;
     }
 
