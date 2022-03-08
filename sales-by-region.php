@@ -110,21 +110,18 @@ function get_orders(WP_REST_Request $request)
             
     ); 
 */
-   //post date is date of order placed. completed_date is date of capture of payment
-   //current setup for Paypal as we only auth. payment when cust shops we need to
-   //get the payment completed date - this is date of capture of payment
-   
+      
     $args = array(
-        
+        //also wc-processing as money is taken at this point. 
         'numberposts' => -1,
         "post_type"        => "shop_order",
-        'post_status' => "wc-completed",
+        'post_status' => array("wc-completed","wc-processing", "wc-refunded"),
         "fields" => "all",
-        "orderBy" => "_completed_date",
+        "orderBy" => "ID",
         "order" => "ASC",
         'meta_query' => array(
             array(
-                'key'     => '_completed_date',
+                'key'     => '_paid_date',
                 'value'   => array($start_date, $end_date),
                 'compare' => 'BETWEEN',
                 'type'=>'DATE'
@@ -134,10 +131,10 @@ function get_orders(WP_REST_Request $request)
 
 
     //DEBUG
-       //$the_object = new WP_Query($args);
+      // $the_object = new WP_Query($args);
 
     // show the mysql as a string
-        //echo $the_object->request;
+       // echo $the_object->request;
         //( wp_posts.post_date >= '2021-11-01 00:00:00' AND wp_posts.post_date <= '2021-11-24 23:59:59' )
 
     //DEBUG
@@ -170,7 +167,7 @@ function get_orders(WP_REST_Request $request)
         $orderShipping = get_post_meta($id, '_order_shipping', true);
         $orderShipping = round($orderShipping, 2);
         $orderTotal = round($orderTotal, 2);
-        $completedDate = get_post_meta($id, '_completed_date', true);
+        $paidDate = get_post_meta($id, '_paid_date', true);
         $name = get_post_meta($id, '_billing_last_name', true);
         $paymentMethod = get_post_meta($id, '_payment_method', true);
 
@@ -191,9 +188,9 @@ function get_orders(WP_REST_Request $request)
         $listingDetail['Name'] = $name;
         $listingDetail['amountGoods'] = number_format($goodsTotal, 2);
         $listingDetail['amountTotal'] = number_format($orderTotal, 2);
-        $date = new DateTime($completedDate);
-        $completedDate = date_format($date,"d-m-Y");
-        $listingDetail['completedDate'] = $completedDate;
+        $date = new DateTime($paidDate);
+        $paidDate = date_format($date,"d-m-Y");
+        $listingDetail['paidDate'] = $paidDate;
         $listingDetail['billingCountry'] = $billingCountry;
 
         if (in_array($billingCountry, $uk))
@@ -342,7 +339,7 @@ function get_orders(WP_REST_Request $request)
     //then joins this to meta to get name and billing country
     //source order post id / amount / name / bill-country
 
-         $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%Y') as 'refundDate', pm.meta_value as 'Amount', " .
+         $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%Y') as 'refundDate', FORMAT(pm.meta_value, 2) as 'Amount', " .
          " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'billingCountry'" .
          " FROM " . $pref . "posts p INNER JOIN " . 
          $pref . "postmeta pm ON p.ID = pm.post_id INNER JOIN " . $pref . "posts pp ON p.post_parent " .
