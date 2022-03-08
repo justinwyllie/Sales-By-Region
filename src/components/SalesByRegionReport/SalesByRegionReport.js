@@ -8,7 +8,16 @@ import apiFetch from '@wordpress/api-fetch';
 /*
 https://gorohovsky.com/extending-woocommerce-javascript-react/
 https://github.com/woocommerce/woocommerce-admin/blob/main/client/analytics/components/report-table/index.js 
+
+Build issues - depreacted webpack
+https://github.com/vercel/next.js/issues/15576 (maybe update wp scripts? look at the mini-css)
+
+https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported
+looks like need to downgrade node from 17.5.0 
+
 */
+
+
 
 function DisplayError(props)
 {
@@ -336,34 +345,61 @@ export class SalesByRegionReport extends ReactComponent {
 
     constructor(props) {
         super(props);
+        
         const dateQuery = this.createDateQuery(this.props.query);
         const storeCurrency = new Currency(storeCurrencySetting);
+
    
         this.state = {
             dateQuery: dateQuery,
             currency: storeCurrency,
             data: { loading: true },
-            error: false
+            error: false,
+            firstOrderNumber: 0,
+            lastOrderNumber: 0,
+            errorMessage: "Sorry. An error has occured. Please try again later",
+            orderNumberError: false,
+            fetchMethod: "date"
+
         };
         
         this.handleDateChange = this.handleDateChange.bind(this);
         this.getQueryParameters = this.getQueryParameters.bind(this);
         this.prepareData = this.prepareData.bind(this);
+        this.filterByOrderNumber = this.filterByOrderNumber.bind(this);
+        this.setFirstOrderNumber = this.setFirstOrderNumber.bind(this);
+        this.setLastOrderNumber = this.setLastOrderNumber.bind(this);
     }
 
     componentDidMount()
     {
-        this.fetchData(this.state.dateQuery);
+        this.fetchData("date", this.state.dateQuery);
     }
 
-    fetchData(dateQuery) {
-
+    fetchData(method, dateQuery, first, last) {
+             
+        this.setState({fetchMethod: method})
         if(!this.state.data.loading) this.setState({data: {loading: true}});
         const endPoints = {
-             'salesByRegion': '/sales-by-region/v1/sales'
+             'salesByRegion': '/sales-by-region/v1/sales/date',
+             'salesByRegionOrderNumber': '/sales-by-region/v1/sales/order-number'
         };
-        const queryParameters = this.getQueryParameters(dateQuery);
-        const salesPath = endPoints.salesByRegion + queryParameters;
+
+        let salesPath;
+        if (method == "date")
+        {
+            const queryParameters = this.getQueryParameters(dateQuery);
+            salesPath = endPoints.salesByRegion + queryParameters;
+        }
+        else if (method == "order-number")
+        {
+            salesPath = endPoints.salesByRegionOrderNumber + "/" + first  + "/" + last;
+        }
+        else 
+        {
+            this.setState({error: true});
+        }
+        
 
         apiFetch({path: salesPath, parse: true}).then((fetchedData) =>
             {
@@ -408,9 +444,35 @@ export class SalesByRegionReport extends ReactComponent {
     }
 
     handleDateChange(newQuery) {
+        this.setState({orderNumberError: false, firstOrderNumber: 0, lastOrderNumber: 0}); 
         const newDateQuery = this.createDateQuery(newQuery);
         this.setState({dateQuery: newDateQuery});
-        this.fetchData(newDateQuery);
+        this.fetchData("date", newDateQuery);
+    }
+
+    filterByOrderNumber() {
+        
+        const first = this.state.firstOrderNumber;
+        const last = this.state.lastOrderNumber;
+        if ((first == 0) || (last == 0))
+        {
+            this.setState({orderNumberError: true});  
+
+        }
+        else
+        {
+            this.setState({orderNumberError: false}); 
+            this.fetchData("order-number", undefined, first, last);
+         
+        }
+    }
+
+    setFirstOrderNumber(event) {
+        this.setState({firstOrderNumber: event.target.value});
+    }
+
+    setLastOrderNumber(event) {
+        this.setState({lastOrderNumber: event.target.value});
     }
 
     render() {
@@ -424,10 +486,40 @@ export class SalesByRegionReport extends ReactComponent {
                 isoDateFormat={isoDateFormat}
                 onDateSelect={this.handleDateChange}
             />;
+   
+        let searchLabel;
+        
+        if (this.state.fetchMethod == "date")
+        {
+            const range = decodeURIComponent(this.getQueryParameters(this.state.dateQuery));
+            
+            let vals = range.split("/");
+   
+            const startDate = vals[1].substring(0, vals[1].indexOf('T'));
+            const endDate = vals[2].substring(0, vals[2].indexOf('T'));
+            //yyyy-mm-dd to dd-mm-yyyy
+
+            const ukStartDate = startDate.split("-").reverse().join("-"); 
+            const ukEndDate = endDate.split("-").reverse().join("-"); 
+
+  
+            searchLabel = <div className="sales-by-region-emphasis">
+                <span>Search Method: Date. From {ukStartDate} to {ukEndDate} </span>
+            </div>;
+        }
+        else if (this.state.fetchMethod == "order-number")
+        {
+            searchLabel = <div className="sales-by-region-emphasis">
+                <span>Search Method: Order number. From: {this.state.firstOrderNumber} 
+                     <span> to {this.state.lastOrderNumber} </span></span>
+            </div>;
+        }
+     
 
         if (this.state.error) 
         { 
-             return <DisplayError message="Sorry. An error has occurred. Please try again later."></DisplayError> 
+             return <DisplayError message={this.state.errorMessage}>
+                    </DisplayError> 
         } 
         else if (this.state.data.loading) 
         {
@@ -436,7 +528,36 @@ export class SalesByRegionReport extends ReactComponent {
         else
         {
             return <Fragment>
-                {reportFilters}   
+                <div className="sales-by-region-box">
+                    
+                    <div> 
+                        {reportFilters} 
+                    </div>       
+                   
+                    <div>
+                        {(this.state.orderNumberError) ? <span className="sales-by-region-error">Please
+                            enter a value in both fields</span> : <span></span>}
+                        <p>Order Number Range:</p>
+                        First: <input id="first-order-no" 
+                            onChange={this.setFirstOrderNumber}
+                            value={this.state.firstOrderNumber}></input><br />
+                        Last:  <input id="last-order-no" 
+                            onChange={this.setLastOrderNumber}
+                            value={this.state.lastOrderNumber} ></input><br />
+                        <button className="sales-by-region-action" onClick={this.filterByOrderNumber}>
+                            Filter by range
+                        </button>
+                    </div> 
+
+                </div>
+
+                <div className="sales-by-region-spacer"></div>
+                
+                <div className="sales-by-region-emphasis">
+                        {searchLabel}
+                </div>
+
+                <div className="sales-by-region-spacer"></div>
 
                
                 {(typeof this.state.data.sales != 'undefined') ? 

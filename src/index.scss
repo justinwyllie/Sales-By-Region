@@ -19,3 +19,41 @@ table.salesByRegionData
 {
     color: #ff0000;
 }
+
+.sales-by-region-box
+{
+    padding: 5px;
+    background-color: aliceblue;
+}
+
+.sales-by-region-spacer
+{
+    margin-top: 20px;
+}
+
+.sales-by-region-action
+{
+    margin-top:  5px;
+    margin-bottom: 5px;
+}
+
+.sales-by-region-error
+{
+    color: red;
+}
+
+.sales-by-region-emphasis
+{
+    font-size: 1.4rem;
+}
+
+.sales-by-region-emphasis span
+{
+    color: green;
+}
+
+/* not implemented */
+.woocommerce-pagination__per-page-picker
+{
+    display: none;
+}

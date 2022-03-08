@@ -92,9 +92,18 @@ add_filter( 'woocommerce_analytics_report_menu_items', 'add_sales_by_region_to_a
  
 function get_orders(WP_REST_Request $request)
 {
-    
-    $start_date = urldecode($request['start_date']);
-    $end_date = urldecode($request['end_date']);
+    $method = urldecode($request['method']);
+     
+    if ($method == "date")
+    {
+        $start_date = urldecode($request['param1']);
+        $end_date = urldecode($request['param2']);
+    }
+    else //it will be order-number
+    {
+        $first = (int) $request['param1'];
+        $last = (int) $request['param2']; 
+    }
 /*
     $args = array(
         
@@ -110,24 +119,42 @@ function get_orders(WP_REST_Request $request)
             
     ); 
 */
-      
-    $args = array(
-        //also wc-processing as money is taken at this point. 
-        'numberposts' => -1,
-        "post_type"        => "shop_order",
-        'post_status' => array("wc-completed","wc-processing", "wc-refunded"),
-        "fields" => "all",
-        "orderBy" => "ID",
-        "order" => "ASC",
-        'meta_query' => array(
-            array(
-                'key'     => '_paid_date',
-                'value'   => array($start_date, $end_date),
-                'compare' => 'BETWEEN',
-                'type'=>'DATE'
+
+    
+
+    if ($method == "date") 
+    { 
+        $args = array(
+            //also wc-processing as money is taken at this point. 
+            'numberposts' => -1,
+            "post_type"        => "shop_order",
+            'post_status' => array("wc-completed","wc-processing", "wc-refunded"),
+            "fields" => "all",
+            "orderBy" => "ID",
+            "order" => "ASC",
+            'meta_query' => array(
+                array(
+                    'key'     => '_paid_date',
+                    'value'   => array($start_date, $end_date),
+                    'compare' => 'BETWEEN',
+                    'type'=>'DATE'
+                )
             )
-        )
-    ); 
+        ); 
+    }
+    else
+    {
+        $args = array(
+            //also wc-processing as money is taken at this point. 
+            'numberposts' => -1,
+            "post_type"        => "shop_order",
+            'post_status' => array("wc-completed","wc-processing", "wc-refunded"),
+            "fields" => "all",
+            "orderBy" => "ID",
+            "order" => "ASC",
+            "post__in" => range($first, $last)
+        );   
+    }
 
 
     //DEBUG
@@ -395,14 +422,19 @@ function get_orders(WP_REST_Request $request)
 
 //https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
 add_action( 'rest_api_init', function () {
-    register_rest_route( 'sales-by-region/v1', '/sales/(?P<start_date>.+)/(?P<end_date>.+)', array(
+    
+    register_rest_route( 'sales-by-region/v1', '/sales/(?P<method>.+)/(?P<param1>.+)/(?P<param2>.+)', array(
       'methods' => 'GET',
       'callback' => 'get_orders',
       'permission_callback' => function () {
         return current_user_can( 'activate_plugins' );
-  } 
+        } 
 
     ));
+
+
+
+
   });
 
    
