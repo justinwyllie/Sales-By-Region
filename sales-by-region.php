@@ -361,11 +361,15 @@ function get_orders(WP_REST_Request $request)
     //REFUNDS
     //http://dev.parkrecords.com/wp-admin/post.php?post=4616&action=edit
     //this gets refund posts in same time period
+    //refunds are stored as posts with a link via post_parent
+    //to the original post which is being refunded 
     //joins to postmeta to get amount
     //rejoins to posts to get parent post original order
     //then joins this to meta to get name and billing country
     //source order post id / amount / name / bill-country
 
+    if ($method == "date")
+    {
          $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%Y') as 'refundDate', FORMAT(pm.meta_value, 2) as 'Amount', " .
          " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'billingCountry'" .
          " FROM " . $pref . "posts p INNER JOIN " . 
@@ -378,6 +382,27 @@ function get_orders(WP_REST_Request $request)
          " pmparent2.meta_key = '_billing_country'" ;
         
         $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$start_date, $end_date]));
+    }
+    else
+    {//this gets refunds which were made against the order ids in the main query
+
+        $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%Y') as 'refundDate', FORMAT(pm.meta_value, 2) as 'Amount', " .
+         " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'billingCountry'" .
+         " FROM " . $pref . "posts p INNER JOIN " . 
+         $pref . "postmeta pm ON p.ID = pm.post_id INNER JOIN " . $pref . "posts pp ON p.post_parent " .
+         " = pp.ID INNER JOIN " . $pref . "postmeta pmparent ON pmparent.post_id = pp.ID " .
+         " INNER JOIN " . $pref . "postmeta pmparent2 ON pmparent2.post_id = pp.ID" .
+         " WHERE pp.ID >= %d AND pp.ID <= %d " .
+         " AND p.post_status = 'wc-completed' and p.post_type = 'shop_order_refund' AND " .
+         " pm.meta_key = '_refund_amount' AND pmparent.meta_key = '_billing_last_name' AND " .
+         " pmparent2.meta_key = '_billing_country'" ;
+        
+        $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$first, $last]));   
+    }
+
+
+
+
         if (is_null($refunds))
         {
             $result["refunds"] = array();
