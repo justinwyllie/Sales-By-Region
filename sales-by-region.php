@@ -92,9 +92,9 @@ add_filter( 'woocommerce_analytics_report_menu_items', 'add_sales_by_region_to_a
  
 function get_orders(WP_REST_Request $request)
 {
-    $method = urldecode($request['method']);
+    $fetchMethod = urldecode($request['method']);
      
-    if ($method == "date")
+    if ($fetchMethod == "date")
     {
         $start_date = urldecode($request['param1']);
         $end_date = urldecode($request['param2']);
@@ -122,7 +122,7 @@ function get_orders(WP_REST_Request $request)
 
     
 
-    if ($method == "date") 
+    if ($fetchMethod == "date") 
     { 
         $args = array(
             //also wc-processing as money is taken at this point. 
@@ -368,7 +368,7 @@ function get_orders(WP_REST_Request $request)
     //then joins this to meta to get name and billing country
     //source order post id / amount / name / bill-country
 
-    if ($method == "date")
+    if ($fetchMethod == "date")
     {
          $refundSql = "SELECT pp.ID as 'Order', DATE_FORMAT(p.post_date, '%e-%m-%Y') as 'refundDate', FORMAT(pm.meta_value, 2) as 'Amount', " .
          " pmparent.meta_value as 'Customer', pmparent2.meta_value as 'billingCountry'" .
@@ -382,6 +382,7 @@ function get_orders(WP_REST_Request $request)
          " pmparent2.meta_key = '_billing_country'" ;
         
         $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$start_date, $end_date]));
+        
     }
     else
     {//this gets refunds which were made against the order ids in the main query
@@ -396,6 +397,7 @@ function get_orders(WP_REST_Request $request)
          " AND p.post_status = 'wc-completed' and p.post_type = 'shop_order_refund' AND " .
          " pm.meta_key = '_refund_amount' AND pmparent.meta_key = '_billing_last_name' AND " .
          " pmparent2.meta_key = '_billing_country'" ;
+
         
         $refunds = $wpdb->get_results($wpdb->prepare($refundSql, [$first, $last]));   
     }
