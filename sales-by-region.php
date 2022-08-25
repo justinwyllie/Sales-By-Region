@@ -239,8 +239,8 @@ refunds:
         $lineListing[] = $listingDetail;
         $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
            "_goods_net" => $goodsTotal, "_billing_country" => $billingCountry); 
-
-        
+//jw fixup - hack it here to combine paypal methods first 4 chars seem to be ppcp
+        //this is sorting them out into blocks per payment method
         if (! isset($incomeByPaymentMethod[$paymentMethod]))
         {
             $incomeByPaymentMethod[$paymentMethod] = array();
