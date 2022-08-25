@@ -104,20 +104,22 @@ function get_orders(WP_REST_Request $request)
         $first = (int) $request['param1'];
         $last = (int) $request['param2']; 
     }
-/*
-    $args = array(
-        
-        'numberposts' => -1,
-        "post_type"        => "shop_order",
-        'post_status' => "wc-completed",
-        "fields" => "ids",
-        "date_query" => array(
-            'after' => $start_date,
-            'before' => $end_date,
-            'inclusive' => true
-            ) 
-            
-    ); 
+
+
+/* what is the strategy here?
+
+we can get by date or order range. otherwise same.
+looks like we get the posts which are the order for ("wc-completed","wc-processing", "wc-refunded"),
+we get the payment method from the meta _payment_method
+get fin data from meta
+then we generate line listing blocks per payment method. e.g. ppcp-gateway ppcp-credit-card-gateway worldpay
+don't know if paypal credit payments or instalments will enter diff
+paypal method is previous integration (standard)
+we do calculate totals on the totals and then on the per payment breakdowns
+
+refunds:
+
+
 */
 
     
