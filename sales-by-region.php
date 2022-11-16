@@ -188,6 +188,9 @@ refunds:
     //$start = hrtime(true);
     //go through data and create two data structures: one which combines 
     //payment methods and one which separates them 
+    //worldpay paypal ppcp-gateway ppcp-credit-card-gateway
+    //guess that consumer credit will also appear as ppcp-gateway
+    //paypal is probably historic but we need to support it. 
     foreach($posts as $post) 
     {
         $id = $post->ID;
@@ -199,6 +202,13 @@ refunds:
         $paidDate = get_post_meta($id, '_paid_date', true);
         $name = get_post_meta($id, '_billing_last_name', true);
         $paymentMethod = get_post_meta($id, '_payment_method', true);
+        $paymentMethodOriginal = $paymentMethod;
+        
+        //treat all paypal routes as one
+        if (substr($paymentMethod, 0, 4) == "ppcp")
+        {
+            $paymentMethod = 'paypal'; 
+        }
 
         if (!in_array($paymentMethod, $paymentMethods))
         {
@@ -235,6 +245,9 @@ refunds:
             $listingDetail['region'] = $rowText;
         }
         $listingDetail['paymentMethod'] = $paymentMethod;
+        $listingDetail['paymentMethodOriginal'] = $paymentMethodOriginal;
+
+        
         
         $lineListing[] = $listingDetail;
         $income[$id] = array("_order_total" => $orderTotal, "_order_shipping" => $orderShipping,
